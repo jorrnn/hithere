@@ -50,8 +50,12 @@
   <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
   <button class="icon-btn" id="logoutBtn" title="Sign out">↗</button>
 </div>
+  <button id="enableNotificationsBtn" class="notification-btn" type="button">
+  <span class="notification-icon">🔔</span>
+  <span class="notification-text">Enable Notifications</span>
+</button>
       <div class="side-section-label">
-        YOUR SPACE 
+        CHATS 
         <button id="newChatBtn" class="new-chat" title="Start a conversation">+</button>
       </div>
       <div class="search-wrap">
@@ -150,29 +154,40 @@
 
     
 <div class="bottom-nav-container">
-  <nav class="bottom-nav">
+  
 
-    <button type="button" class="bottom-nav-item active" id="navChats">
-      <span class="nav-icon">▤</span>
-      <span>Chats</span>
-    </button>
+<nav class="bottom-nav">
 
-    <button type="button" class="bottom-nav-item" id="navSearch">
-      <span class="nav-icon">⌕</span>
-      <span>Search</span>
-    </button>
+  <button class="bottom-nav-item active" id="navChats" type="button">
+    <i data-lucide="messages-square"></i>
+    <span>Chats</span>
+  </button>
 
-    <button type="button" class="bottom-nav-item" id="navNewChat">
-      <span class="nav-icon">＋</span>
-      <span>New chat</span>
-    </button>
+  <button class="bottom-nav-item" id="navSearch" type="button">
+    <i data-lucide="search"></i>
+    <span>Search</span>
+  </button>
 
-    <button type="button" class="bottom-nav-item" id="navSettings">
-      <span class="nav-icon">⚙</span>
-      <span>Settings</span>
-    </button>
+  <button class="bottom-nav-item new-chat-nav" id="navNewChat" type="button">
+    <span class="new-chat-icon">
+      <i data-lucide="plus"></i>
+    </span>
+    <span>New Chat</span>
+  </button>
 
-  </nav>
+  <button class="bottom-nav-item" id="navCalls" type="button">
+    <i data-lucide="phone"></i>
+    <span>Calls</span>
+  </button>
+
+  <button class="bottom-nav-item" id="navSettings" type="button">
+    <i data-lucide="settings-2"></i>
+    <span>Settings</span>
+  </button>
+
+</nav>
+
+
 </div>
 
 
@@ -390,5 +405,9 @@
   <div id="toast" class="toast" role="status"></div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/app.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    lucide.createIcons();
+  </script>
 </body>
 </html>

@@ -39,6 +39,82 @@ $("#authForm").addEventListener("submit", async (event)=>{
   } catch(err) { $("#authError").textContent=err.message; }
 });
 
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+
+  const rawData = window.atob(base64);
+  return Uint8Array.from(
+    [...rawData].map(char => char.charCodeAt(0))
+  );
+}
+
+async function enableNotifications() {
+  try {
+    if (!("Notification" in window) ||
+        !("serviceWorker" in navigator) ||
+        !("PushManager" in window)) {
+      alert("Push notifications are not supported by this browser.");
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+
+    if (permission !== "granted") {
+      alert("Please allow notifications in your browser settings.");
+      return;
+    }
+
+    const registration = await navigator.serviceWorker.register(
+      "/service-worker.js"
+    );
+
+    await navigator.serviceWorker.ready;
+
+    const keyResponse = await fetch("/api/push/public-key");
+
+    if (!keyResponse.ok) {
+      throw new Error("Could not retrieve notification settings. Please log in again.");
+    }
+
+    const { publicKey } = await keyResponse.json();
+
+    const subscription =
+      await registration.pushManager.getSubscription() ||
+      await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey)
+      });
+
+    const saveResponse = await fetch("/api/push/subscribe", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(subscription)
+    });
+
+    if (!saveResponse.ok) {
+      throw new Error("Could not save your notification subscription.");
+    }
+
+    alert("Background notifications enabled successfully!");
+  } catch (error) {
+    console.error("Notification setup error:", error);
+    alert(error.message || "Could not enable notifications.");
+  }
+}
+
+
+const notificationBtn = $("#enableNotificationsBtn");
+
+if (notificationBtn) {
+  notificationBtn.addEventListener("click", enableNotifications);
+}
+
+
 async function enterApp(user) {
   state.user = user;
 
@@ -69,12 +145,38 @@ async function enterApp(user) {
 
   
 state.socket.on("message:new", message => {
+  // Request permission for browser notifications
+
+
+
   const conversationId = Number(message.conversation_id);
   const isActiveConversation =
     conversationId === Number(state.activeId);
 
   const isOwnMessage =
     Number(message.sender_id) === Number(state.user.id);
+
+// Show a notification when someone else sends a message
+if (
+  !isOwnMessage &&
+  !isActiveConversation &&
+  "Notification" in window &&
+  Notification.permission === "granted"
+) {
+  const notification = new Notification(
+    message.sender_name || "New message",
+    {
+      body: message.body || "You received a new message.",
+      icon: "/favicon.ico",
+      tag: `message-${message.id}`
+    }
+  );
+
+  notification.onclick = () => {
+    window.focus();
+    notification.close();
+  };
+}
 
   // Update the conversation preview and move it to the top.
   const conversation = state.conversations.find(

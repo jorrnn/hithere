@@ -6,6 +6,7 @@ const helmet = require("helmet");
 const session = require("express-session");
 const PgSession = require("connect-pg-simple")(session);
 const bcrypt = require("bcryptjs");
+const webpush = require("web-push");
 const { Server } = require("socket.io");
 const { pool, initDb } = require("./db");
 
@@ -23,6 +24,17 @@ if (!process.env.SESSION_SECRET) {
   console.error("SESSION_SECRET is missing. Add it to .env.");
   process.exit(1);
 }
+
+if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+  console.error("VAPID keys are missing from .env.");
+  process.exit(1);
+}
+
+webpush.setVapidDetails(
+  process.env.VAPID_SUBJECT,
+  process.env.VAPID_PUBLIC_KEY,
+  process.env.VAPID_PRIVATE_KEY
+);
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: "1mb" }));
@@ -42,6 +54,47 @@ const sessionMiddleware = session({
   }
 });
 app.use(sessionMiddleware);
+
+// Get the public VAPID key
+app.get("/api/push/public-key", requireAuth, (req, res) => {
+  res.json({
+    publicKey: process.env.VAPID_PUBLIC_KEY
+  });
+});
+
+// Save a browser's push subscription
+app.post("/api/push/subscribe", requireAuth, async (req, res) => {
+  try {
+    const subscription = req.body;
+
+    if (
+      !subscription ||
+      !subscription.endpoint ||
+      !subscription.keys?.p256dh ||
+      !subscription.keys?.auth
+    ) {
+      return res.status(400).json({
+        error: "Invalid push subscription."
+      });
+    }
+
+    await pool.query(
+      `INSERT INTO push_subscriptions (user_id, subscription)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id, (subscription->>'endpoint'))
+       DO UPDATE SET subscription = EXCLUDED.subscription`,
+      [req.session.userId, JSON.stringify(subscription)]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Push subscription error:", err);
+    res.status(500).json({
+      error: "Could not save push subscription."
+    });
+  }
+});
+
 io.engine.use(sessionMiddleware);
 
 const onlineUsers = new Map();
@@ -700,6 +753,50 @@ socket.emit("presence:list", presenceList);
     `, [message.id, conversationId, userId]);
 
     io.to(`conversation:${conversationId}`).emit("message:new", message);
+
+
+// Send background push notifications to other conversation members
+try {
+  const recipientIds = members.rows.map(member => member.user_id);
+
+  if (recipientIds.length > 0) {
+    const subscriptions = await pool.query(
+      `SELECT id, user_id, subscription
+       FROM push_subscriptions
+       WHERE user_id = ANY($1::int[])`,
+      [recipientIds]
+    );
+
+    const payload = JSON.stringify({
+      title: message.sender_name || "New message",
+      body: message.body || "You received a new message.",
+      url: "/"
+    });
+
+    await Promise.allSettled(
+      subscriptions.rows.map(async (row) => {
+        try {
+          await webpush.sendNotification(
+            row.subscription,
+            payload
+          );
+        } catch (error) {
+          if (error.statusCode === 404 || error.statusCode === 410) {
+            await pool.query(
+              "DELETE FROM push_subscriptions WHERE id = $1",
+              [row.id]
+            );
+          } else {
+            console.error("Push notification error:", error.message);
+          }
+        }
+      })
+    );
+  }
+} catch (error) {
+  console.error("Background notification error:", error.message);
+}
+
 
     for (const m of members.rows) {
       io.to(`user:${m.user_id}`).emit("conversation:updated", {

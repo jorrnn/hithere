@@ -104,6 +104,20 @@ await pool.query(`
     ALTER TABLE messages
     ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ;
   `);
+
+  await pool.query(`  
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id BIGSERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      subscription JSONB NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`
+  CREATE UNIQUE INDEX IF NOT EXISTS push_subscriptions_user_endpoint_idx
+  ON push_subscriptions (user_id, (subscription->>'endpoint'));
+  `);
 }
 
 module.exports = { pool, initDb };

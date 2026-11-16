@@ -1,6 +1,7 @@
 .env
 .env.local
 .env.*.local
+.env.*
 node_modules/
 .neon
 .DS_Store
