@@ -2152,3 +2152,452 @@ body:not(.dark-mode) .details-note {
     line-height: 1;
   }
 }
+
+/* VOICE AND VIDEO CALL INTERFACE */
+.call-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #171522;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.call-modal.hidden {
+  display: none;
+}
+
+.call-container {
+  width: 100%;
+  height: 100%;
+  max-width: 600px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 25px;
+}
+
+.call-top {
+  position: absolute;
+  top: 25px;
+  left: 25px;
+  right: 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.call-top button {
+  border: none;
+  background: #353244;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.call-user {
+  text-align: center;
+  z-index: 2;
+}
+
+.call-avatar {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: #7868e6;
+  display: grid;
+  place-items: center;
+  font-size: 42px;
+  margin: 0 auto 20px;
+}
+
+.call-user h2 {
+  margin: 0 0 10px;
+}
+
+.call-user p {
+  color: #c4c1d0;
+}
+
+#remoteVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #171522;
+}
+
+#localVideo {
+  position: absolute;
+  right: 20px;
+  top: 80px;
+  width: 110px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 15px;
+  background: #353244;
+  z-index: 3;
+}
+
+.call-controls {
+  position: absolute;
+  bottom: 45px;
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  z-index: 4;
+}
+
+.call-controls button {
+  width: 58px;
+  height: 58px;
+  border: none;
+  border-radius: 50%;
+  background: #353244;
+  color: white;
+  font-size: 23px;
+  cursor: pointer;
+}
+
+#endCallBtn {
+  background: #e53950;
+  transform: rotate(135deg);
+}
+
+@media (max-width: 600px) {
+  .call-container {
+    max-width: none;
+  }
+
+  #localVideo {
+    width: 90px;
+    height: 125px;
+    right: 15px;
+  }
+}
+
+/* VOICE CALL SCREEN */
+
+.call-modal.voice-call #remoteVideo,
+.call-modal.voice-call #localVideo {
+  display: none;
+}
+
+.call-modal.voice-call .call-user {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.call-modal.voice-call .call-avatar {
+  width: 140px;
+  height: 140px;
+  font-size: 55px;
+  box-shadow: 0 0 0 12px rgba(120, 104, 230, 0.12);
+}
+
+.call-modal.voice-call .call-user p {
+  margin-top: 12px;
+}
+
+/* MODERN CHAT HEADER CALL BUTTONS */
+
+.chat-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  width: 100%;
+  min-width: 0;
+}
+
+.chat-header-actions .active-chat-head {
+  flex: 1;
+  min-width: 0;
+}
+
+.call-header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.header-call-btn {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-color, #e5e5eb);
+  border-radius: 50%;
+  background: var(--surface-color, #fff);
+  color: var(--text-color, #343344);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.header-call-btn svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 2;
+}
+
+.header-call-btn:hover {
+  background: #7868e6;
+  color: white;
+  border-color: #7868e6;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 600px) {
+  .call-header-buttons {
+    gap: 7px;
+  }
+
+  .header-call-btn {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* MODERN CALL CONTROLS */
+
+.call-controls {
+  position: absolute;
+  bottom: 45px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 14px 24px;
+  background: rgba(35, 33, 49, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50px;
+  backdrop-filter: blur(18px);
+  z-index: 10;
+}
+
+.call-control-btn {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: #454254;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.call-control-btn svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2;
+}
+
+.call-control-btn:hover {
+  background: #625a80;
+  transform: scale(1.07);
+}
+
+.end-call-btn {
+  width: 62px;
+  height: 62px;
+  background: #e53950;
+  color: #fff;
+}
+
+.end-call-btn:hover {
+  background: #c8233c;
+}
+
+.end-call-btn svg {
+  transform: none;
+}
+
+@media (max-width: 600px) {
+  .call-controls {
+    bottom: 30px;
+    gap: 16px;
+    padding: 11px 18px;
+  }
+
+  .call-control-btn {
+    width: 49px;
+    height: 49px;
+  }
+
+  .end-call-btn {
+    width: 58px;
+    height: 58px;
+  }
+}
+
+/* MODERN VIDEO CALL LAYOUT */
+
+.call-modal:not(.voice-call) .call-container {
+  max-width: 100%;
+  padding: 0;
+  overflow: hidden;
+  background: #111018;
+}
+
+.call-modal:not(.voice-call) #remoteVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #111018;
+}
+
+.call-modal:not(.voice-call) #localVideo {
+  position: absolute;
+  top: 85px;
+  right: 25px;
+  width: 160px;
+  height: 210px;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.8);
+  border-radius: 18px;
+  background: #292633;
+  z-index: 5;
+}
+
+.call-modal:not(.voice-call) .call-user {
+  position: absolute;
+  top: 25px;
+  left: 25px;
+  text-align: left;
+  z-index: 4;
+  background: rgba(20,18,30,0.55);
+  padding: 12px 18px;
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+}
+
+.call-modal:not(.voice-call) .call-avatar {
+  display: none;
+}
+
+.call-modal:not(.voice-call) .call-user h2 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.call-modal:not(.voice-call) .call-user p {
+  margin: 5px 0 0;
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .call-modal:not(.voice-call) #localVideo {
+    width: 105px;
+    height: 145px;
+    top: 80px;
+    right: 15px;
+  }
+
+  .call-modal:not(.voice-call) .call-user {
+    top: 15px;
+    left: 15px;
+  }
+}
+
+/* CALL SCREEN HEADER */
+
+.call-top {
+  position: absolute;
+  top: 22px;
+  left: 25px;
+  right: 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 12;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.call-top button {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 50%;
+  background: rgba(50,47,65,0.85);
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.call-top button:hover {
+  background: #e53950;
+}
+
+@media (max-width: 600px) {
+  .call-top {
+    top: 15px;
+    left: 15px;
+    right: 15px;
+  }
+}
+
+/* RESPONSIVE CALL SCREEN */
+
+@media (max-width: 480px) {
+  .call-container {
+    padding: 15px;
+  }
+
+  .call-avatar {
+    width: 95px;
+    height: 95px;
+    font-size: 36px;
+  }
+
+  .call-user h2 {
+    font-size: 20px;
+  }
+
+  .call-controls {
+    width: max-content;
+    max-width: calc(100% - 30px);
+    gap: 13px;
+    padding: 10px 15px;
+  }
+
+  .call-control-btn {
+    width: 46px;
+    height: 46px;
+  }
+
+  .end-call-btn {
+    width: 55px;
+    height: 55px;
+  }
+
+  .call-modal:not(.voice-call) #localVideo {
+    width: 90px;
+    height: 125px;
+    top: 70px;
+    right: 12px;
+  }
+}

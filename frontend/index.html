@@ -97,6 +97,7 @@
     ←
   </button>
 
+  <div class="chat-header-actions">
   <div id="activeChatHead" class="active-chat-head">
     <div class="avatar muted-avatar">✳</div>
     <div class="chat-user-info">
@@ -104,6 +105,19 @@
       <small>Choose someone to say hello</small>
     </div>
   </div>
+
+  <div class="call-header-buttons">
+  <button id="voiceCallBtn" class="header-call-btn" type="button"
+    title="Voice call" aria-label="Voice call">
+    <i data-lucide="phone"></i>
+  </button>
+
+  <button id="videoCallBtn" class="header-call-btn" type="button"
+    title="Video call" aria-label="Video call">
+    <i data-lucide="video"></i>
+  </button>
+</div> 
+</div>
 
   <div class="header-actions">
     <button class="icon-btn" id="detailsBtn" title="Conversation details">ⓘ</button>
@@ -403,11 +417,52 @@
     </section>
   </div>
   <div id="toast" class="toast" role="status"></div>
+  
+  <!-- CALL INTERFACE -->
+<div id="callModal" class="call-modal hidden">
+  <div class="call-container">
+
+    <div class="call-top">
+      <span id="callStatus">Calling...</span>
+      <button id="closeCallBtn" type="button">✕</button>
+    </div>
+
+    <div class="call-user">
+      <div id="callAvatar" class="call-avatar">?</div>
+      <h2 id="callUserName">User</h2>
+      <p id="callTimer">Connecting...</p>
+    </div>
+
+    <video id="remoteVideo" autoplay playsinline></video>
+    <video id="localVideo" autoplay muted playsinline></video>
+
+    <div class="call-controls">
+  <button id="muteCallBtn" class="call-control-btn" type="button"
+    title="Mute microphone">
+    <i data-lucide="mic"></i>
+  </button>
+
+  <button id="cameraCallBtn" class="call-control-btn" type="button"
+    title="Turn camera on or off">
+    <i data-lucide="video"></i>
+  </button>
+
+  <button id="endCallBtn" class="call-control-btn end-call-btn"
+    type="button" title="End call">
+    <i data-lucide="phone-off"></i>
+  </button>
+</div>
+
+  </div>
+</div>
+
   <script src="/socket.io/socket.io.js"></script>
+  <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
   <script src="/app.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     lucide.createIcons();
   </script>
+
 </body>
 </html>

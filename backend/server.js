@@ -970,6 +970,157 @@ try {
       io.emit("presence:update", { userId, online: false });
     } else onlineUsers.set(userId, count);
   });
+
+
+// VOICE AND VIDEO CALL SIGNALING
+
+socket.on("call:initiate", async ({ conversationId, offer, callType }) => {
+  try {
+    const id = Number(conversationId);
+
+    if (!id || !offer) return;
+
+    const members = await pool.query(
+      `SELECT user_id FROM conversation_members
+       WHERE conversation_id = $1`,
+      [id]
+    );
+
+    if (!members.rows.some(m => Number(m.user_id) === Number(userId))) return;
+
+    const recipients = members.rows.filter(
+      m => Number(m.user_id) !== Number(userId)
+    );
+
+    recipients.forEach(member => {
+      io.to(`user:${member.user_id}`).emit("call:incoming", {
+        conversationId: id,
+        callerId: userId,
+        offer,
+        callType: callType === "video" ? "video" : "voice"
+      });
+    });
+  } catch (error) {
+    console.error("Call initiation error:", error);
+  }
+});
+
+socket.on("call:signal", async ({ conversationId, targetUserId, signal }) => {
+  try {
+    const id = Number(conversationId);
+    const target = Number(targetUserId);
+
+    if (!id || !target || !signal) return;
+
+    const members = await pool.query(
+      `SELECT user_id FROM conversation_members
+       WHERE conversation_id = $1`,
+      [id]
+    );
+
+    const allowed = members.rows.some(m => Number(m.user_id) === Number(userId)) &&
+      members.rows.some(m => Number(m.user_id) === target);
+
+    if (!allowed) return;
+
+    io.to(`user:${target}`).emit("call:signal", {
+      conversationId: id,
+      userId,
+      signal
+    });
+  } catch (error) {
+    console.error("Call signal error:", error);
+  }
+});
+
+socket.on("call:reject", ({ conversationId, callerId }) => {
+  if (!callerId) return;
+
+  io.to(`user:${Number(callerId)}`).emit("call:rejected", {
+    conversationId,
+    userId
+  });
+});
+
+socket.on("call:end", ({ conversationId, targetUserId }) => {
+  if (!targetUserId) return;
+
+  io.to(`user:${Number(targetUserId)}`).emit("call:ended", {
+    conversationId,
+    userId
+  });
+});
+
+// Accept an incoming call
+socket.on("call:accept", ({ conversationId, answer }) => {
+  const userId = socket.request.session.userId;
+  if (!userId) return;
+
+  socket.to(`conversation:${conversationId}`).emit("call:accepted", {
+    conversationId,
+    userId,
+    answer
+  });
+});
+
+// REJECT AN INCOMING CALL
+socket.on("call:reject", async ({ conversationId, callerId }) => {
+  try {
+    const id = Number(conversationId);
+    const caller = Number(callerId);
+
+    if (!id || !caller) return;
+
+    const members = await pool.query(
+      `SELECT user_id FROM conversation_members
+       WHERE conversation_id = $1`,
+      [id]
+    );
+
+    const allowed =
+      members.rows.some(m => Number(m.user_id) === Number(userId)) &&
+      members.rows.some(m => Number(m.user_id) === caller);
+
+    if (!allowed) return;
+
+    io.to(`user:${caller}`).emit("call:rejected", {
+      conversationId: id,
+      userId
+    });
+  } catch (error) {
+    console.error("Call rejection error:", error);
+  }
+});
+
+
+// END AN ACTIVE CALL
+socket.on("call:end", async ({ conversationId, targetUserId }) => {
+  try {
+    const id = Number(conversationId);
+    const target = Number(targetUserId);
+
+    if (!id || !target) return;
+
+    const members = await pool.query(
+      `SELECT user_id FROM conversation_members
+       WHERE conversation_id = $1`,
+      [id]
+    );
+
+    const allowed =
+      members.rows.some(m => Number(m.user_id) === Number(userId)) &&
+      members.rows.some(m => Number(m.user_id) === target);
+
+    if (!allowed) return;
+
+    io.to(`user:${target}`).emit("call:ended", {
+      conversationId: id,
+      userId
+    });
+  } catch (error) {
+    console.error("Call ending error:", error);
+  }
+});
 });
 
 app.get("*", (req, res) => res.sendFile(path.join(__dirname, "../frontend/index.html")));

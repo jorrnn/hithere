@@ -1,7 +1,159 @@
 const $ = (selector) => document.querySelector(selector);
-const state = { user: null, mode: "login", conversations: [], activeId: null, activeUser: null, socket: null, online: new Set(), replyingTo: null };
-const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const state = {
+  user: null,
+  mode: "login",
+  conversations: [],
+  activeId: null,
+  activeUser: null,
+  socket: null,
+  online: new Set(),
+  replyingTo: null,
+
+  peer: null,
+  localStream: null,
+  remoteStream: null,
+  callType: null,
+  callActive: false,
+  incomingCall: null,
+  callTimer: null,
+  callTargetId: null
+};const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 const initials = (name) => String(name || "?").trim().split(/\s+/).slice(0,2).map(x=>x[0]).join("").toUpperCase();
+// START CALL DURATION TIMER
+function startCallTimer() {
+  if (state.callTimer) {
+    clearInterval(state.callTimer);
+  }
+
+  let seconds = 0;
+
+  $("#callTimer").textContent = "00:00";
+
+  state.callTimer = setInterval(() => {
+    seconds++;
+
+    const minutes = String(Math.floor(seconds / 60)).padStart(2, "0");
+    const remainingSeconds = String(seconds % 60).padStart(2, "0");
+
+    $("#callTimer").textContent = `${minutes}:${remainingSeconds}`;
+  }, 1000);
+}
+// ========================================
+// HITHERE VOICE AND VIDEO CALL FUNCTIONS
+// ========================================
+
+async function startCall(callType) {
+  try {
+    if (!state.socket || !state.activeId || !state.activeUser?.id) {
+      toast("Open a one-to-one conversation first.");
+      return;
+    }
+
+    if (state.peer || state.callActive) {
+      toast("You are already in a call.");
+      return;
+    }
+
+    if (!window.SimplePeer) {
+      toast("Calling library could not load.");
+      return;
+    }
+
+    state.callType = callType;
+    state.callTargetId = Number(state.activeUser.id);
+
+    state.localStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: callType === "video"
+    });
+
+    $("#callModal").classList.remove("hidden");
+    $("#callModal").classList.toggle("voice-call", callType === "voice");
+    $("#callStatus").textContent = "Calling...";
+    $("#callUserName").textContent =
+      state.activeUser.displayName || "HiThere user";
+    $("#callAvatar").textContent =
+      initials(state.activeUser.displayName);
+
+    $("#localVideo").srcObject = state.localStream;
+
+    const peer = new SimplePeer({
+      initiator: true,
+      trickle: false,
+      stream: state.localStream
+    });
+
+    state.peer = peer;
+
+    peer.on("signal", offer => {
+      state.socket.emit("call:initiate", {
+        conversationId: state.activeId,
+        offer,
+        callType
+      });
+    });
+
+    peer.on("stream", stream => {
+      state.remoteStream = stream;
+      $("#remoteVideo").srcObject = stream;
+      $("#callStatus").textContent = "Connected";
+      startCallTimer();
+      state.callActive = true;
+    });
+
+    peer.on("error", error => {
+      console.error("Outgoing call error:", error);
+      toast("Call connection failed.");
+      endCall();
+    });
+
+  } catch (error) {
+    console.error("Could not start call:", error);
+    toast("Could not access your microphone or camera.");
+    endCall();
+  }
+}
+
+
+// End an active call
+function endCall(notifyPeer = true) {
+  const conversationId =
+    state.incomingCall?.conversationId || state.activeId;
+
+  if (notifyPeer && state.socket && state.callTargetId) {
+    state.socket.emit("call:end", {
+      conversationId,
+      targetUserId: state.callTargetId
+    });
+  }
+
+  if (state.callTimer) {
+    clearInterval(state.callTimer);
+    state.callTimer = null;
+  }
+
+  if (state.peer) {
+    state.peer.destroy();
+    state.peer = null;
+  }
+
+  if (state.localStream) {
+    state.localStream.getTracks().forEach(track => track.stop());
+    state.localStream = null;
+  }
+
+  $("#remoteVideo").srcObject = null;
+  $("#localVideo").srcObject = null;
+
+  state.remoteStream = null;
+  state.callActive = false;
+  state.callType = null;
+  state.incomingCall = null;
+  state.callTargetId = null;
+
+  $("#callModal").classList.add("hidden");
+  $("#callStatus").textContent = "Calling...";
+}
 async function api(url, options = {}) {
   const response = await fetch(url, { credentials:"same-origin", headers:{ "Content-Type":"application/json", ...(options.headers||{}) }, ...options });
   const data = await response.json().catch(()=>({}));
@@ -143,12 +295,133 @@ async function enterApp(user) {
     toast("Live connection interrupted. Refresh if messages stop updating.");
   });
 
-  
+  // Handle call connection signals
+state.socket.on("call:signal", data => {
+  if (
+    !state.peer ||
+    Number(data.conversationId) !== Number(state.activeId) &&
+    Number(data.conversationId) !== Number(state.incomingCall?.conversationId)
+  ) {
+    return;
+  }
+
+  try {
+    state.peer.signal(data.signal);
+  } catch (error) {
+    console.error("Call signal error:", error);
+  }
+});
+
+// Handle rejected calls
+state.socket.on("call:rejected", () => {
+  toast("The other person declined your call.");
+  endCall(false);
+});
+
+// Handle calls ended by the other person
+state.socket.on("call:ended", () => {
+  toast("The other person ended the call.");
+  endCall(false);
+});
+
+  // Handle incoming calls
+state.socket.on("call:incoming", async (data) => {
+  if (state.callActive || state.incomingCall) {
+    state.socket.emit("call:reject", {
+      conversationId: data.conversationId,
+      callerId: data.callerId
+    });
+    return;
+  }
+
+  state.incomingCall = data;
+  state.callTargetId = Number(data.callerId);
+
+  const conversation = state.conversations.find(
+    c => Number(c.id) === Number(data.conversationId)
+  );
+
+  const callerName =
+    conversation?.other_user?.displayName || "HiThere user";
+
+  const accepted = confirm(
+    `${callerName} is calling you (${data.callType}). Accept?`
+  );
+
+  if (!accepted) {
+    state.socket.emit("call:reject", {
+      conversationId: data.conversationId,
+      callerId: data.callerId
+    });
+
+    state.incomingCall = null;
+    return;
+  }
+
+  try {
+    state.callType = data.callType;
+
+    state.localStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: data.callType === "video"
+    });
+
+    $("#callModal").classList.remove("hidden");
+    $("#callModal").classList.toggle("voice-call", data.callType === "voice");
+    $("#callStatus").textContent = "Connecting...";
+    $("#callUserName").textContent = callerName;
+    $("#callAvatar").textContent = initials(callerName);
+
+    $("#localVideo").srcObject = state.localStream;
+
+    const peer = new SimplePeer({
+      initiator: false,
+      trickle: false,
+      stream: state.localStream
+    });
+
+    state.peer = peer;
+
+    peer.on("signal", signal => {
+      state.socket.emit("call:signal", {
+        conversationId: data.conversationId,
+        targetUserId: data.callerId,
+        signal
+      });
+    });
+
+    peer.on("stream", stream => {
+      state.remoteStream = stream;
+      $("#remoteVideo").srcObject = stream;
+      $("#callStatus").textContent = "Connected";
+      startCallTimer();
+    });
+
+    peer.on("error", error => {
+      console.error("Incoming call error:", error);
+      toast("Call connection failed.");
+      endCall();
+    });
+
+    peer.signal(data.offer);
+
+    state.callActive = true;
+
+  } catch (error) {
+    console.error("Could not accept call:", error);
+    toast("Could not access your microphone or camera.");
+
+    state.socket.emit("call:reject", {
+      conversationId: data.conversationId,
+      callerId: data.callerId
+    });
+
+    endCall();
+  }
+});
+
 state.socket.on("message:new", message => {
   // Request permission for browser notifications
-
-
-
   const conversationId = Number(message.conversation_id);
   const isActiveConversation =
     conversationId === Number(state.activeId);
@@ -1308,4 +1581,59 @@ $("#passwordSettingsForm")?.addEventListener("submit", async (event) => {
     message.textContent = error.message;
     message.style.color = "#d64545";
   }
+});
+
+// VOICE AND VIDEO CALL BUTTONS
+
+$("#voiceCallBtn")?.addEventListener("click", () => {
+  startCall("voice");
+});
+
+$("#videoCallBtn")?.addEventListener("click", () => {
+  startCall("video");
+});
+
+// END CALL BUTTONS
+
+$("#endCallBtn")?.addEventListener("click", () => {
+  endCall();
+});
+
+$("#closeCallBtn")?.addEventListener("click", () => {
+  endCall();
+});
+
+// MUTE MICROPHONE
+
+$("#muteCallBtn")?.addEventListener("click", () => {
+  const track = state.localStream?.getAudioTracks()[0];
+
+  if (!track) return;
+
+  track.enabled = !track.enabled;
+
+  $("#muteCallBtn").innerHTML = track.enabled
+  ? '<i data-lucide="mic"></i>'
+  : '<i data-lucide="mic-off"></i>';
+
+lucide.createIcons();
+});
+
+// TOGGLE CAMERA
+
+$("#cameraCallBtn")?.addEventListener("click", () => {
+  const track = state.localStream?.getVideoTracks()[0];
+
+  if (!track) {
+    toast("Camera is not active for this voice call.");
+    return;
+  }
+
+  track.enabled = !track.enabled;
+
+  $("#cameraCallBtn").innerHTML = track.enabled
+  ? '<i data-lucide="video"></i>'
+  : '<i data-lucide="video-off"></i>';
+
+lucide.createIcons();
 });
