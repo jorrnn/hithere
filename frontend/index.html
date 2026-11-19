@@ -40,7 +40,21 @@
 
   <main id="appView" class="app-shell hidden">
     <aside class="sidebar">
-      <div class="side-brand"><div class="brand-mark small">h<span>.</span></div><span>HiThere<span class="brand-period">.</span></span></div>
+      <!-- MOBILE HOME HEADER -->
+<div class="mobile-home-header">
+  <div class="mobile-home-brand">
+    <div class="brand-mark small">H<span>.</span></div>
+    <span>HiThere<span class="brand-period">.</span></span>
+  </div>
+
+  <div class="mobile-home-actions">
+  <button type="button" id="mobileSearchBtn" aria-label="Search">⌕</button>
+  <button type="button" id="mobileProfileBtn" aria-label="Profile">
+    <span id="mobileProfileAvatar">H</span>
+  </button>
+</div>
+</div>
+      <div class="side-brand"><div class="brand-mark small">H<span>.</span></div><span>HiThere<span class="brand-period">.</span></span></div>
       <div class="side-user">
   <div class="avatar" id="myAvatar">H</div>
   <div class="side-user-info">
@@ -56,12 +70,16 @@
 </button>
       <div class="side-section-label">
         CHATS 
-        <button id="newChatBtn" class="new-chat" title="Start a conversation">+</button>
       </div>
       <div class="search-wrap">
         <span>⌕</span>
         <input id="chatSearch" placeholder="Find a conversation">
       </div>
+      <div class="mobile-chat-tabs">
+  <button type="button" class="mobile-chat-tab active" data-filter="all">Chats</button>
+  <button type="button" class="mobile-chat-tab" data-filter="groups">Groups</button>
+  <button type="button" class="mobile-chat-tab" data-filter="calls">Calls</button>
+</div>
       
 <!-- ONLINE PEOPLE -->
 <div class="online-people-section">
@@ -79,12 +97,6 @@
 <div id="conversationList" class="conversation-list">
   <div class="empty-side">Your conversations will appear here.</div>
 </div>
-
-      <div class="sidebar-bottom">
-        <span class="status-pulse"></span>
-        <span>All caught up</span>
-        <span class="version">4SG</span>
-      </div>
     </aside>
 
     <section class="chat-area">
@@ -168,7 +180,6 @@
 
     
 <div class="bottom-nav-container">
-  
 
 <nav class="bottom-nav">
 
@@ -177,15 +188,16 @@
     <span>Chats</span>
   </button>
 
-  <button class="bottom-nav-item" id="navSearch" type="button">
+  <!-- <button class="bottom-nav-item" id="navSearch" type="button">
     <i data-lucide="search"></i>
     <span>Search</span>
-  </button>
+  </button> -->
 
   <button class="bottom-nav-item new-chat-nav" id="navNewChat" type="button">
-    <span class="new-chat-icon">
+    <!-- <span class="new-chat-icon">
       <i data-lucide="plus"></i>
-    </span>
+    </span> -->
+    <i data-lucide="plus"></i>
     <span>New Chat</span>
   </button>
 
@@ -200,10 +212,28 @@
   </button>
 
 </nav>
-
-
 </div>
 
+<!-- CALL HISTORY PAGE -->
+<section id="callsView" class="calls-view hidden">
+
+  <header class="calls-header">
+    <div>
+      <p class="eyebrow">STAY CONNECTED</p>
+      <h1>Calls</h1>
+      <p>Your recent voice and video calls.</p>
+    </div>
+
+    <button type="button" id="closeCalls" class="settings-close">×</button>
+  </header>
+
+  <div class="calls-content">
+    <div id="callHistoryList" class="call-history-list">
+      <p class="empty-state">Your recent calls will appear here.</p>
+    </div>
+  </div>
+
+</section>
 
     <!-- SETTINGS PAGE -->
 <section id="settingsView" class="settings-view hidden">

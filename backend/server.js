@@ -529,6 +529,49 @@ app.get("/api/conversations", requireAuth, async (req, res) => {
   res.json({ conversations: result.rows });
 });
 
+// GET CALL HISTORY
+app.get("/api/calls", requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+
+    const result = await pool.query(`
+      SELECT
+        ch.id,
+        ch.conversation_id,
+        ch.caller_id,
+        ch.receiver_id,
+        ch.call_type,
+        ch.status,
+        ch.duration_seconds,
+        ch.started_at,
+        ch.ended_at,
+
+        caller.username AS caller_username,
+        caller.display_name AS caller_name,
+        caller.avatar_color AS caller_avatar,
+
+        receiver.username AS receiver_username,
+        receiver.display_name AS receiver_name,
+        receiver.avatar_color AS receiver_avatar
+
+      FROM call_history ch
+      LEFT JOIN users caller ON caller.id = ch.caller_id
+      LEFT JOIN users receiver ON receiver.id = ch.receiver_id
+
+      WHERE ch.caller_id = $1 OR ch.receiver_id = $1
+
+      ORDER BY ch.started_at DESC
+      LIMIT 100
+    `, [userId]);
+
+    res.json({ calls: result.rows });
+
+  } catch (error) {
+    console.error("Call history error:", error);
+    res.status(500).json({ error: "Could not load call history." });
+  }
+});
+
 app.post("/api/conversations", requireAuth, async (req, res) => {
   const otherId = Number(req.body.userId);
   if (!Number.isInteger(otherId) || otherId === req.session.userId)
@@ -624,7 +667,7 @@ const result = await pool.query(`
   )
 
   ORDER BY m.created_at ASC
-  LIMIT 200
+  LIMIT 2000
 `, [id, req.session.userId]);
 
   res.json({ messages: result.rows });
@@ -992,16 +1035,67 @@ socket.on("call:initiate", async ({ conversationId, offer, callType }) => {
       m => Number(m.user_id) !== Number(userId)
     );
 
-    recipients.forEach(member => {
-      io.to(`user:${member.user_id}`).emit("call:incoming", {
+    const validCallType = callType === "video" ? "video" : "voice";
+
+    for (const member of recipients) {
+      const receiverId = Number(member.user_id);
+
+      const record = await pool.query(`
+        INSERT INTO call_history (
+          conversation_id,
+          caller_id,
+          receiver_id,
+          call_type,
+          status
+        )
+        VALUES ($1, $2, $3, $4, 'missed')
+        RETURNING id
+      `, [id, userId, receiverId, validCallType]);
+
+      io.to(`user:${receiverId}`).emit("call:incoming", {
         conversationId: id,
         callerId: userId,
         offer,
-        callType: callType === "video" ? "video" : "voice"
+        callType: validCallType,
+        callHistoryId: record.rows[0].id
       });
-    });
+    }
+
   } catch (error) {
     console.error("Call initiation error:", error);
+  }
+});
+
+// ACCEPT AN INCOMING CALL
+socket.on("call:accept", async ({ conversationId, callerId, callHistoryId }) => {
+  try {
+    const id = Number(conversationId);
+    const caller = Number(callerId);
+    const historyId = Number(callHistoryId);
+
+    if (!id || !caller || !historyId) return;
+
+    const result = await pool.query(`
+      UPDATE call_history
+      SET status = 'completed',
+          started_at = NOW()
+      WHERE id = $1
+        AND conversation_id = $2
+        AND caller_id = $3
+        AND receiver_id = $4
+      RETURNING id
+    `, [historyId, id, caller, userId]);
+
+    if (!result.rowCount) return;
+
+    io.to(`user:${caller}`).emit("call:accepted", {
+      conversationId: id,
+      receiverId: userId,
+      callHistoryId: historyId
+    });
+
+  } catch (error) {
+    console.error("Call acceptance error:", error);
   }
 });
 
@@ -1033,13 +1127,51 @@ socket.on("call:signal", async ({ conversationId, targetUserId, signal }) => {
   }
 });
 
-socket.on("call:reject", ({ conversationId, callerId }) => {
-  if (!callerId) return;
+// REJECT AN INCOMING CALL
+socket.on("call:reject", async ({ conversationId, callerId }) => {
+  try {
+    const id = Number(conversationId);
+    const caller = Number(callerId);
 
-  io.to(`user:${Number(callerId)}`).emit("call:rejected", {
-    conversationId,
-    userId
-  });
+    if (!id || !caller) return;
+
+    const members = await pool.query(
+      `SELECT user_id FROM conversation_members
+       WHERE conversation_id = $1`,
+      [id]
+    );
+
+    const allowed =
+      members.rows.some(m => Number(m.user_id) === Number(userId)) &&
+      members.rows.some(m => Number(m.user_id) === caller);
+
+    if (!allowed) return;
+
+    await pool.query(`
+      UPDATE call_history
+      SET status = 'rejected',
+          ended_at = NOW()
+      WHERE id = (
+        SELECT id
+        FROM call_history
+        WHERE conversation_id = $1
+          AND caller_id = $2
+          AND receiver_id = $3
+          AND status = 'missed'
+          AND ended_at IS NULL
+        ORDER BY started_at DESC
+        LIMIT 1
+      )
+    `, [id, caller, userId]);
+
+    io.to(`user:${caller}`).emit("call:rejected", {
+      conversationId: id,
+      userId
+    });
+
+  } catch (error) {
+    console.error("Call rejection error:", error);
+  }
 });
 
 socket.on("call:end", ({ conversationId, targetUserId }) => {
@@ -1094,6 +1226,7 @@ socket.on("call:reject", async ({ conversationId, callerId }) => {
 
 
 // END AN ACTIVE CALL
+// END AN ACTIVE CALL AND SAVE ITS DURATION
 socket.on("call:end", async ({ conversationId, targetUserId }) => {
   try {
     const id = Number(conversationId);
@@ -1113,14 +1246,33 @@ socket.on("call:end", async ({ conversationId, targetUserId }) => {
 
     if (!allowed) return;
 
+    await pool.query(`
+      UPDATE call_history
+      SET ended_at = NOW(),
+          duration_seconds = GREATEST(
+            0,
+            FLOOR(EXTRACT(EPOCH FROM (NOW() - started_at)))::INTEGER
+          )
+      WHERE conversation_id = $1
+        AND (
+          (caller_id = $2 AND receiver_id = $3)
+          OR
+          (caller_id = $3 AND receiver_id = $2)
+        )
+        AND status = 'completed'
+        AND ended_at IS NULL
+    `, [id, userId, target]);
+
     io.to(`user:${target}`).emit("call:ended", {
       conversationId: id,
       userId
     });
+
   } catch (error) {
     console.error("Call ending error:", error);
   }
 });
+
 });
 
 app.get("*", (req, res) => res.sendFile(path.join(__dirname, "../frontend/index.html")));

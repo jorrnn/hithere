@@ -391,11 +391,17 @@ state.socket.on("call:incoming", async (data) => {
     });
 
     peer.on("stream", stream => {
-      state.remoteStream = stream;
-      $("#remoteVideo").srcObject = stream;
-      $("#callStatus").textContent = "Connected";
-      startCallTimer();
-    });
+  state.remoteStream = stream;
+  $("#remoteVideo").srcObject = stream;
+  $("#callStatus").textContent = "Connected";
+  startCallTimer();
+
+  state.socket.emit("call:accept", {
+    conversationId: data.conversationId,
+    callerId: data.callerId,
+    callHistoryId: data.callHistoryId
+  });
+});
 
     peer.on("error", error => {
       console.error("Incoming call error:", error);
@@ -627,10 +633,20 @@ function conversationName(c) { return c.is_group?c.title:(c.other_user?.displayN
 function renderConversations() {
   const query = $("#chatSearch").value.trim().toLowerCase();
 
-  const items = state.conversations.filter(c =>
+  const activeFilter = document.querySelector(".mobile-chat-tab.active")?.dataset.filter || "all";
+
+const items = state.conversations.filter(c => {
+  const matchesSearch =
     conversationName(c).toLowerCase().includes(query) ||
-    (c.other_user?.username || "").includes(query)
-  );
+    (c.other_user?.username || "").toLowerCase().includes(query);
+
+  const matchesFilter =
+  activeFilter === "all"
+    ? !c.is_group
+    : activeFilter === "groups" && c.is_group;
+
+  return matchesSearch && matchesFilter;
+});
 
   $("#conversationList").innerHTML = items.length
     ? items.map(c => {
@@ -813,6 +829,7 @@ function renderActiveHeader() {
 async function openConversation(id) {
   const c=state.conversations.find(x=>Number(x.id)===id); if(!c)return;
   state.activeId=id; 
+  console.log("OPENED CONVERSATION ID:", id);
   $(".app-shell")?.classList.add("chat-open");
   $("#appView").classList.add("chat-open");
   state.activeUser=c.other_user||null;
@@ -1124,13 +1141,35 @@ $("#detailsContent").innerHTML = `
   </p>
 `;
 }
-function openModal() { $("#searchModal").classList.remove("hidden"); $("#userSearch").value=""; $("#userResults").innerHTML='<p class="search-prompt">Type at least 2 characters to find people.</p>'; $("#userSearch").focus(); }
-function closeModal() { $("#searchModal").classList.add("hidden"); }
-$("#newChatBtn").addEventListener("click",openModal); $("#welcomeNewChat").addEventListener("click",openModal);
+function openModal() {
+  $("#searchModal").classList.remove("hidden");
+  $("#userSearch").value = "";
+  $("#userResults").innerHTML = '<p class="search-prompt">Type at least 2 characters to find people.</p>';
+  $("#userSearch").focus();
+}function closeModal() { $("#searchModal").classList.add("hidden"); }
+$("#welcomeNewChat")?.addEventListener("click", openModal);
 $("#closeModal").addEventListener("click",closeModal); $("#searchModal").addEventListener("click",e=>{if(e.target.dataset.close)closeModal();});
 $("#closeDetails").addEventListener("click",()=>$("#detailsPanel").classList.add("hidden"));
 $("#detailsBtn").addEventListener("click",()=>$("#detailsPanel").classList.toggle("hidden"));
 $("#chatSearch").addEventListener("input",renderConversations);
+// Mobile chat tabs
+document.querySelectorAll(".mobile-chat-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    const filter = tab.dataset.filter;
+
+    if (filter === "calls") {
+      document.getElementById("navCalls")?.click();
+      return;
+    }
+
+    document.querySelectorAll(".mobile-chat-tab").forEach(item => {
+      item.classList.remove("active");
+    });
+
+    tab.classList.add("active");
+    renderConversations();
+  });
+});
 let searchDelay;
 $("#userSearch").addEventListener("input",()=>{
   clearTimeout(searchDelay); const q=$("#userSearch").value.trim();
@@ -1179,7 +1218,7 @@ $("#navSearch")?.addEventListener("click", () => {
 });
 
 $("#navNewChat")?.addEventListener("click", () => {
-  $("#newChatBtn")?.click();
+  openModal();
 
   document.querySelectorAll(".bottom-nav-item")
     .forEach(item => item.classList.remove("active"));
@@ -1187,6 +1226,8 @@ $("#navNewChat")?.addEventListener("click", () => {
   $("#navNewChat")?.classList.add("active");
 });
 
+// CALL HISTORY NAVIGATION
+$("#navCalls")?.addEventListener("click", openCalls);
 
 $("#backToChats")?.addEventListener("click", () => {
   // Return to the conversations screen.
@@ -1205,12 +1246,13 @@ $("#backToChats")?.addEventListener("click", () => {
 });
 
 
-
 // ========================================
 // HITHERE SETTINGS NAVIGATION
 // ========================================
 
 const settingsView = $("#settingsView");
+const callsView = $("#callsView");
+console.log("Calls element found:", callsView);
 
 function openSettings() {
   if (!settingsView) return;
@@ -1236,6 +1278,116 @@ function openSettings() {
   $("#navSettings")?.classList.add("active");
 }
 
+function openCalls() {
+  console.log("Calls button clicked");
+  
+  if (!callsView) return;
+
+  callsView.classList.remove("hidden");
+  console.log("Calls view:", callsView);
+console.log("Calls hidden:", callsView.classList.contains("hidden"));
+
+  settingsView?.classList.add("hidden");
+  welcomePanel?.classList.add("hidden");
+  messagePanel?.classList.add("hidden");
+
+  document.querySelectorAll(".bottom-nav-item")
+    .forEach(item => item.classList.remove("active"));
+
+  $("#navCalls")?.classList.add("active");
+
+  loadCallHistory();
+}
+
+async function loadCallHistory() {
+  const list = $("#callHistoryList");
+
+  if (!list) return;
+
+  list.innerHTML = '<p class="empty-state">Loading your calls...</p>';
+
+  try {
+    const data = await api("/api/calls");
+
+    if (!data.calls || data.calls.length === 0) {
+      list.innerHTML = '<p class="empty-state">No calls yet. Your call history will appear here.</p>';
+      return;
+    }
+
+    list.innerHTML = data.calls.map(call => {
+      const outgoing = Number(call.caller_id) === Number(state.user.id);
+
+      const personName = outgoing
+        ? call.receiver_name || call.receiver_username
+        : call.caller_name || call.caller_username;
+
+      const missed = call.status === "missed";
+      const rejected = call.status === "rejected";
+
+      const direction = outgoing ? "Outgoing" : "Incoming";
+
+      const date = new Date(call.started_at).toLocaleString();
+
+      const duration = Number(call.duration_seconds || 0);
+      const minutes = Math.floor(duration / 60);
+      const seconds = duration % 60;
+
+      return `
+        <div class="call-history-item">
+          <div class="call-history-info">
+            <strong>${personName || "Unknown user"}</strong>
+            <span>${direction} · ${call.call_type} call</span>
+            <small>${date}</small>
+            <small>${missed ? "Missed" : rejected ? "Rejected" : `${minutes}m ${seconds}s`}</small>
+          </div>
+
+          <button
+            class="call-again-btn"
+            data-conversation-id="${call.conversation_id || ""}"
+            data-call-type="${call.call_type}"
+            type="button"
+          >
+            Call again
+          </button>
+        </div>
+      `;
+    }).join("");
+
+  } catch (error) {
+    console.error("Call history error:", error);
+
+    list.innerHTML = '<p class="empty-state">Unable to load calls. Please try again.</p>';
+  }
+}
+
+// CALL AGAIN FROM HISTORY
+$("#callHistoryList")?.addEventListener("click", async (event) => {
+  const button = event.target.closest(".call-again-btn");
+
+  if (!button) return;
+
+  const conversationId = Number(button.dataset.conversationId);
+  const callType = button.dataset.callType;
+
+  if (!conversationId) {
+    toast("This call has no available conversation.");
+    return;
+  }
+
+  const conversation = state.conversations.find(
+    c => Number(c.id) === conversationId
+  );
+
+  if (!conversation) {
+    toast("Conversation not found. Please refresh your chats.");
+    return;
+  }
+
+  await openConversation(conversationId);
+
+  startCall(callType === "video" ? "video" : "voice");
+});
+
 function closeSettings() {
   settingsView?.classList.add("hidden");
 
@@ -1247,13 +1399,44 @@ function closeSettings() {
 
 // Desktop settings button
 $("#settingsBtn")?.addEventListener("click", openSettings);
+document.getElementById("mobileSearchBtn")?.addEventListener("click", () => {
+  document.getElementById("chatSearch")?.focus();
+});
+
+document.getElementById("mobileSettingsBtn")?.addEventListener("click", () => {
+  document.getElementById("settingsBtn")?.click();
+});
+
+const mobileProfileBtn = document.getElementById("mobileProfileBtn");
+
+mobileProfileBtn?.addEventListener("click", () => {
+  document.getElementById("settingsBtn")?.click();
+});
+
+const updateMobileAvatar = () => {
+  const originalAvatar = document.getElementById("myAvatar");
+  const mobileAvatar = document.getElementById("mobileProfileAvatar");
+
+  if (originalAvatar && mobileAvatar) {
+    mobileAvatar.textContent = originalAvatar.textContent.trim().charAt(0) || "H";
+  }
+};
+
+updateMobileAvatar();
 
 // Mobile settings button
 $("#navSettings")?.addEventListener("click", openSettings);
 
 // Close settings
 $("#closeSettings")?.addEventListener("click", closeSettings);
+$("#closeCalls")?.addEventListener("click", () => {
+  callsView?.classList.add("hidden");
 
+  document.querySelectorAll(".bottom-nav-item")
+    .forEach(item => item.classList.remove("active"));
+
+  $("#navChats")?.classList.add("active");
+});
 
 // ========================================
 // SETTINGS SECTION NAVIGATION
@@ -1637,3 +1820,29 @@ $("#cameraCallBtn")?.addEventListener("click", () => {
 
 lucide.createIcons();
 });
+
+// Organise mobile header controls
+const mobileActions = document.querySelector(".mobile-home-actions");
+
+if (mobileActions) {
+  const controls = [
+    document.getElementById("myName"),
+    document.getElementById("enableNotificationsBtn"),
+    document.getElementById("mobileSearchBtn"),
+    document.getElementById("mobileProfileBtn"),
+    document.getElementById("logoutBtn")
+  ];
+
+  controls.forEach(element => {
+    if (!element) return;
+
+    if (!element.dataset.headerPlaceholder) {
+      const placeholder = document.createComment("header-control");
+      element.parentNode.insertBefore(placeholder, element);
+      element.dataset.headerPlaceholder = "true";
+      element._headerPlaceholder = placeholder;
+    }
+
+    mobileActions.appendChild(element);
+  });
+}

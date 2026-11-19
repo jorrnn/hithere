@@ -118,6 +118,25 @@ await pool.query(`
   CREATE UNIQUE INDEX IF NOT EXISTS push_subscriptions_user_endpoint_idx
   ON push_subscriptions (user_id, (subscription->>'endpoint'));
   `);
+
+  await pool.query(`
+  CREATE TABLE IF NOT EXISTS call_history (
+    id BIGSERIAL PRIMARY KEY,
+    conversation_id INTEGER REFERENCES conversations(id) ON DELETE SET NULL,
+    caller_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    receiver_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    call_type VARCHAR(10) NOT NULL CHECK (call_type IN ('voice', 'video')),
+    status VARCHAR(20) NOT NULL CHECK (status IN ('completed', 'missed', 'rejected')),
+    duration_seconds INTEGER NOT NULL DEFAULT 0,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ended_at TIMESTAMPTZ
+  );
+`);
+
+await pool.query(`
+  CREATE INDEX IF NOT EXISTS call_history_users_idx
+  ON call_history (caller_id, receiver_id, started_at DESC);
+`);
 }
 
 module.exports = { pool, initDb };
