@@ -915,6 +915,11 @@ function appendMessage(message) {
 
   const messageBubble = el.querySelector(".message-bubble");
 
+  messageBubble.addEventListener("contextmenu", (event) => {
+  event.preventDefault();
+  showDeleteMenu(message);
+});
+
 let startX = 0;
 let startY = 0;
 let isDragging = false;
@@ -1061,10 +1066,13 @@ function showDeleteMenu(message) {
     deleteMessage(message.id, "me");
   };
 
-  deleteEveryoneBtn.onclick = () => {
-    menu.style.display = "none";
-    deleteMessage(message.id, "everyone");
-  };
+  deleteEveryoneBtn.onclick = (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+
+  menu.style.display = "none";
+  deleteMessage(message.id, "everyone");
+};
 }
 
 document.addEventListener("pointerdown", (event) => {
@@ -1080,10 +1088,14 @@ document.addEventListener("pointerdown", (event) => {
 });
 
 function deleteMessage(messageId, deleteType) {
+  console.log("Delete clicked:", messageId, deleteType);
+
   state.socket.emit("message:delete", {
     messageId,
     deleteType
   }, (result) => {
+    console.log("Delete server response:", result);
+
     if (!result?.ok) {
       toast(result?.error || "Could not delete message.");
       return;
