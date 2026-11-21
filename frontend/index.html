@@ -48,15 +48,17 @@
   </div>
 
   <div class="mobile-home-actions">
-  <!-- <button type="button" id="mobileSearchBtn" aria-label="Search">⌕</button>
-  <button type="button" id="mobileProfileBtn" aria-label="Profile">
-    <span id="mobileProfileAvatar">H</span>
-  </button> -->
+  <div class="avatar profile-avatar" id="mobileProfileAvatar" title="Change profile picture">
+    <span>H</span>
+  </div>
 </div>
 </div>
       <div class="side-brand"><div class="brand-mark small">H<span>.</span></div><span>HiThere<span class="brand-period">.</span></span></div>
       <div class="side-user">
-  <div class="avatar" id="myAvatar">H</div>
+  <div class="avatar profile-avatar" id="myAvatar" title="Change profile picture">
+  <span>H</span>
+  <input type="file" id="profilePictureInput" accept="image/*" hidden>
+</div>
   <div class="side-user-info">
     <strong id="myName">Your profile</strong>
     <small id="myHandle">@username</small>
@@ -141,11 +143,7 @@
         <button class="primary-btn" id="welcomeNewChat">Start a conversation <span>→</span></button>
       </section>
       <section id="messagePanel" class="message-panel hidden">
-        <div id="messageContextMenu" class="message-context-menu">
-          <button type="button" id="replyContextBtn">Reply</button>
-          <button type="button" id="deleteMeContextBtn">Delete for me</button>
-          <button type="button" id="deleteEveryoneContextBtn">Delete for everyone</button>
-        </div>
+        
         <div id="messages" class="messages"></div>
         <div id="replyPreview" class="reply-preview" style="display:none;">
   <div>
@@ -278,13 +276,25 @@
           <p>Manage how other people see you on HiThere.</p>
         </div>
 
-        <div class="settings-profile-card">
-          <div class="avatar settings-avatar" id="settingsAvatar">H</div>
-          <div>
-            <strong id="settingsProfileName">Your name</strong>
-            <p id="settingsProfileHandle">@username</p>
-          </div>
-        </div>
+        
+<div class="settings-profile-card">
+  <div class="settings-avatar-area">
+    <div class="avatar settings-avatar" id="settingsAvatar" title="View profile picture">
+      <span>H</span>
+    </div>
+
+    <div class="profile-picture-actions">
+      <button type="button" id="chooseProfilePhoto">Choose photo</button>
+      <button type="button" id="viewProfilePhoto">View profile picture</button>
+      <button type="button" id="removeProfilePhoto">Remove picture</button>
+    </div>
+  </div>
+
+  <div>
+    <strong id="settingsProfileName">Your name</strong>
+    <p id="settingsProfileHandle">@username</p>
+  </div>
+</div>
 
         <form id="profileSettingsForm" class="settings-form">
           <label>
@@ -446,6 +456,11 @@
       <div id="userResults" class="user-results"><p class="search-prompt">Type at least 2 characters to find people.</p></div>
     </section>
   </div>
+  <div id="messageContextMenu" class="message-context-menu">
+    <button type="button" id="replyContextBtn">Reply</button>
+    <button type="button" id="deleteMeContextBtn">Delete for me</button>
+    <button type="button" id="deleteEveryoneContextBtn">Delete for everyone</button>
+  </div>
   <div id="toast" class="toast" role="status"></div>
   
   <!-- CALL INTERFACE -->
@@ -488,11 +503,21 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
-  <script src="/app.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     lucide.createIcons();
   </script>
+
+
+<div id="photoPreview" class="photo-preview hidden">
+  <button id="closePhotoPreview" class="photo-preview-close" type="button">
+    &times;
+  </button>
+  <img id="photoPreviewImage" src="" alt="Profile picture">
+</div>
+
+<script src="/app.js"></script>
+
 
 </body>
 </html>

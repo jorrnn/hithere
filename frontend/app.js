@@ -270,13 +270,67 @@ if (notificationBtn) {
 async function enterApp(user) {
   state.user = user;
 
+  console.log("Logged-in user data:", user);
+
   $("#authView").classList.add("hidden");
   $("#appView").classList.remove("hidden");
 
   $("#myName").textContent = user.displayName;
-  $("#myHandle").textContent = "@" + user.username;
-  $("#myAvatar").textContent = initials(user.displayName);
-  $("#myAvatar").style.background = user.avatarColor;
+  const mobileHeaderName = $("#mobileHeaderName");
+
+if (mobileHeaderName) {
+  mobileHeaderName.textContent = user.displayName;
+}
+  const mobileAvatar = $("#mobileProfileAvatar");
+
+if (mobileAvatar) {
+  const mobileAvatarText = mobileAvatar.querySelector("span");
+
+  if (mobileAvatarText) {
+    mobileAvatarText.textContent = initials(user.displayName);
+    mobileAvatarText.style.display = user.profilePicture ? "none" : "block";
+  }
+
+  mobileAvatar.style.backgroundColor = user.avatarColor;
+
+  if (user.profilePicture) {
+  mobileAvatar.style.backgroundImage =
+    `url('${user.profilePicture}')`;
+
+  mobileAvatar.style.backgroundSize = "cover";
+  mobileAvatar.style.backgroundPosition = "center";
+  mobileAvatar.style.backgroundRepeat = "no-repeat";
+  mobileAvatar.style.color = "transparent";
+
+  if (mobileAvatarText) {
+    mobileAvatarText.style.display = "none";
+  }
+} else {
+  mobileAvatar.style.backgroundImage = "none";
+  mobileAvatar.style.color = "";
+
+  if (mobileAvatarText) {
+    mobileAvatarText.style.display = "block";
+  }
+}
+}
+$("#myHandle").textContent = "@" + user.username;
+
+const avatar = $("#myAvatar");
+const avatarText = avatar.querySelector("span");
+
+avatarText.textContent = initials(user.displayName);
+avatar.style.backgroundColor = user.avatarColor;
+
+if (user.profilePicture) {
+  avatar.style.backgroundImage = `url("${user.profilePicture}")`;
+  avatar.style.backgroundSize = "cover";
+  avatar.style.backgroundPosition = "center";
+  avatarText.style.display = "none";
+} else {
+  avatar.style.backgroundImage = "none";
+  avatarText.style.display = "block";
+}
 
   state.socket = io();
 
@@ -621,6 +675,14 @@ async function loadConversations() {
   const data=await api("/api/conversations"); 
   state.conversations=data.conversations;
 
+  console.table(
+  state.conversations.map(c => ({
+    name: c.other_user?.displayName,
+    username: c.other_user?.username,
+    profilePicture: c.other_user?.profilePicture ? "PRESENT" : "MISSING"
+  }))
+);
+
   renderConversations();
   renderOnlinePeople();
 
@@ -658,8 +720,11 @@ const items = state.conversations.filter(c => {
         return `
           <div class="conversation-item ${Number(c.id) === Number(state.activeId) ? "active" : ""} ${unread > 0 ? "unread" : ""}" data-id="${c.id}">
             <div class="avatar-presence">
-              <div class="avatar" style="background:${escapeHtml(u.avatarColor || "#7868e6")}">
-                ${escapeHtml(initials(name))}
+              <div class="avatar" style="
+                background:${escapeHtml(u.avatarColor || "#7868e6")};
+                ${u.profilePicture ? `background-image:url('${escapeHtml(u.profilePicture)}');  background-size:cover;              background-position:center;` : ""}
+                ">
+                ${u.profilePicture ? "" : escapeHtml(initials(name))}
               </div>
 
               ${u.id && !c.is_group
@@ -778,9 +843,19 @@ function renderOnlinePeople() {
   container.innerHTML = onlinePeople.map(({ user, conversationId }) => `
     <div class="online-person" data-conversation-id="${conversationId}" title="${escapeHtml(user.displayName)}">
       <div class="online-avatar-wrap">
-        <div class="online-avatar" style="background:${escapeHtml(user.avatarColor || "#eee9ff")}; display:flex; align-items:center; justify-content:center; color:white; font-weight:700;">
-          ${escapeHtml(initials(user.displayName))}
+
+        <div class="online-avatar" style="
+          background:${escapeHtml(user.avatarColor || "#eee9ff")};
+          ${user.profilePicture ? `background-image:url('${escapeHtml(user.profilePicture)}');background-size:cover;        background-position:center;` : ""}
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          color:white;
+          font-weight:700;
+          ">
+          ${user.profilePicture ? "" : escapeHtml(initials(user.displayName))}
         </div>
+
         <span class="online-dot"></span>
       </div>
       <span class="online-person-name">
@@ -810,9 +885,14 @@ function renderActiveHeader() {
 
   $("#activeChatHead").innerHTML = `
     <div class="avatar-presence">
-      <div class="avatar" style="background:${escapeHtml(user?.avatarColor || "#7868e6")}">
-        ${escapeHtml(initials(name))}
-      </div>
+
+      <div class="avatar" style="
+  background:${escapeHtml(user?.avatarColor || "#7868e6")};
+  ${user?.profilePicture ? `background-image:url('${escapeHtml(user.profilePicture)}');background-size:cover;background-position:center;` : ""}
+">
+  ${user?.profilePicture ? "" : escapeHtml(initials(name))}
+</div>
+
       ${user && !conversation.is_group
         ? `<span class="presence-dot ${online ? "online" : "offline"}"></span>`
         : ""}
@@ -980,49 +1060,63 @@ document.addEventListener("mouseup", (event) => {
 });
 
 let longPressTimer;
+let longPressTriggered = false;
+let touchStartX = 0;
+let touchStartY = 0;
 
-messageBubble.addEventListener("touchstart", () => {
+messageBubble.addEventListener("touchstart", (event) => {
+  const touch = event.changedTouches[0];
+
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+  longPressTriggered = false;
+
+  startReplyDrag(touch.clientX, touch.clientY);
+
   longPressTimer = setTimeout(() => {
+    longPressTriggered = true;
+    isDragging = false;
+    messageBubble.style.transform = "";
+    // alert("Long press detected!");
     showDeleteMenu(message);
   }, 600);
 }, { passive: true });
 
-messageBubble.addEventListener("touchend", () => {
-  clearTimeout(longPressTimer);
-});
-
-messageBubble.addEventListener("touchmove", () => {
-  clearTimeout(longPressTimer);
-}, { passive: true });
-
-messageBubble.addEventListener("touchcancel", () => {
-  clearTimeout(longPressTimer);
-});
-
-// Phone swipe
-messageBubble.addEventListener("touchstart", (event) => {
-  const touch = event.changedTouches[0];
-  startReplyDrag(touch.clientX, touch.clientY);
-}, { passive: true });
-
 messageBubble.addEventListener("touchmove", (event) => {
   const touch = event.changedTouches[0];
-  moveReplyDrag(touch.clientX, touch.clientY);
+
+  const moveX = Math.abs(touch.clientX - touchStartX);
+  const moveY = Math.abs(touch.clientY - touchStartY);
+
+  if (moveX > 12 || moveY > 12) {
+    clearTimeout(longPressTimer);
+  }
+
+  if (!longPressTriggered) {
+    moveReplyDrag(touch.clientX, touch.clientY);
+  }
 }, { passive: true });
 
 messageBubble.addEventListener("touchend", (event) => {
+  clearTimeout(longPressTimer);
+
   const touch = event.changedTouches[0];
-  finishReplyDrag(touch.clientX, touch.clientY);
+
+  if (!longPressTriggered) {
+    finishReplyDrag(touch.clientX, touch.clientY);
+  }
+
+  longPressTriggered = false;
 });
 
 messageBubble.addEventListener("touchcancel", () => {
+  clearTimeout(longPressTimer);
   isDragging = false;
+  longPressTriggered = false;
   messageBubble.style.transform = "";
 });
-
   $("#messages").scrollTop = $("#messages").scrollHeight;
 }
-
 
 function showDeleteMenu(message) {
   if (message.deleted_for_everyone) return;
@@ -1031,6 +1125,11 @@ function showDeleteMenu(message) {
   const menu = $("#messageContextMenu");
 
   menu.style.display = "block";
+  menu.style.background = "red";
+menu.style.position = "fixed";
+menu.style.zIndex = "999999";
+menu.style.left = "20px";
+menu.style.top = "100px";
 
   const replyBtn = $("#replyContextBtn");
   const deleteMeBtn = $("#deleteMeContextBtn");
@@ -1044,8 +1143,17 @@ function showDeleteMenu(message) {
 
   const rect = messageElement.getBoundingClientRect();
 
-  menu.style.left = `${Math.max(10, Math.min(rect.left, window.innerWidth - 210))}px`;
-  menu.style.top = `${Math.min(rect.bottom + 5, window.innerHeight - 160)}px`;
+  const menuWidth = 190;
+const menuHeight = menu.offsetHeight || 150;
+
+menu.style.left = `${Math.max(10, Math.min(rect.left, window.innerWidth - menuWidth - 10))}px`;
+
+const topPosition =
+  rect.bottom + menuHeight + 10 > window.innerHeight
+    ? rect.top - menuHeight - 5
+    : rect.bottom + 5;
+
+menu.style.top = `${Math.max(10, topPosition)}px`;
 
   replyBtn.onclick = () => {
     state.replyingTo = message;
@@ -1142,9 +1250,13 @@ function renderDetails() {
   const online = isUserOnline(u.id);
 
 $("#detailsContent").innerHTML = `
-  <div class="avatar detail-avatar" style="background:${escapeHtml(u.avatarColor)}">
-    ${escapeHtml(initials(u.displayName))}
+
+  <div class="avatar detail-avatar" style="
+    background:${escapeHtml(u.avatarColor || "#7868e6")};
+    ${u.profilePicture ? `background-image:url('${escapeHtml(u.profilePicture)}');background-size:cover;   background-position:center;` : ""}">
+    ${u.profilePicture ? "" : escapeHtml(initials(u.displayName))}
   </div>
+
   <h3>${escapeHtml(u.displayName)}</h3>
   <p>@${escapeHtml(u.username)}</p>
   <p class="online-label ${online ? "online-text" : "offline-text"}">
@@ -1278,8 +1390,19 @@ function openSettings() {
     $("#settingsProfileName").textContent = state.user.displayName || "Your name";
     $("#settingsProfileHandle").textContent = "@" + (state.user.username || "username");
 
-    $("#settingsAvatar").textContent = initials(state.user.displayName);
-    $("#settingsAvatar").style.background = state.user.avatarColor || "#7868e6";
+    const settingsAvatar = $("#settingsAvatar");
+
+if (state.user.profilePicture) {
+  settingsAvatar.textContent = "";
+  settingsAvatar.style.backgroundImage = `url("${state.user.profilePicture}")`;
+  settingsAvatar.style.backgroundSize = "cover";
+  settingsAvatar.style.backgroundPosition = "center";
+  settingsAvatar.style.backgroundColor = "transparent";
+} else {
+  settingsAvatar.textContent = initials(state.user.displayName);
+  settingsAvatar.style.backgroundImage = "none";
+  settingsAvatar.style.backgroundColor = state.user.avatarColor || "#7868e6";
+}
 
     $("#settingsAvatarColor").value = state.user.avatarColor || "#7868e6";
   }
@@ -1542,7 +1665,7 @@ profileForm?.addEventListener("submit", async (event) => {
     // Update the sidebar profile
     $("#myName").textContent = result.user.displayName;
     $("#myHandle").textContent = "@" + result.user.username;
-    $("#myAvatar").textContent = initials(result.user.displayName);
+    $("#myAvatar").querySelector("span").textContent = initials(result.user.displayName);
     $("#myAvatar").style.background = result.user.avatarColor;
 
     // Update the settings preview
@@ -1858,3 +1981,249 @@ if (mobileActions) {
     mobileActions.appendChild(element);
   });
 }
+
+// Profile picture upload
+const profilePictureInput = document.getElementById("profilePictureInput");
+profilePictureInput?.addEventListener("click", (event) => {
+  event.stopPropagation();
+});
+
+
+
+// View the current profile picture
+const chooseProfilePhoto = document.getElementById("chooseProfilePhoto");
+// View the current profile picture
+document.getElementById("viewProfilePhoto")?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  showProfilePicture(state.user?.profilePicture);
+});
+
+if (chooseProfilePhoto && profilePictureInput) {
+  chooseProfilePhoto.onclick = function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    hideProfilePicture();
+
+    profilePictureInput.value = "";
+    profilePictureInput.click();
+  };
+}
+
+// Remove the current profile picture
+document.getElementById("removeProfilePhoto")?.addEventListener("click", async () => {
+  if (!state.user?.profilePicture) {
+    toast("You don't have a profile picture to remove.");
+    return;
+  }
+
+  if (!confirm("Are you sure you want to remove your profile picture?")) {
+    return;
+  }
+
+  try {
+    await api("/api/profile-picture", {
+      method: "DELETE"
+    });
+
+    state.user.profilePicture = null;
+
+    const avatars = [
+      document.getElementById("myAvatar"),
+      document.getElementById("settingsAvatar"),
+      document.getElementById("mobileProfileAvatar")
+    ];
+
+    avatars.forEach(avatar => {
+      if (!avatar) return;
+
+      avatar.style.backgroundImage = "none";
+      avatar.style.backgroundSize = "";
+      avatar.style.backgroundPosition = "";
+      avatar.style.backgroundColor = state.user.avatarColor || "#7868e6";
+
+      const span = avatar.querySelector("span");
+      if (span) {
+        span.textContent = initials(state.user.displayName);
+        span.style.display = "block";
+      } else {
+        avatar.textContent = initials(state.user.displayName);
+      }
+    });
+
+    toast("Profile picture removed successfully.");
+
+  } catch (error) {
+    toast(error.message || "Could not remove profile picture.");
+  }
+});
+
+const profileAvatar = document.getElementById("myAvatar");
+
+profileAvatar.addEventListener("click", (event) => {
+  event.stopPropagation();
+  showProfilePicture(state.user?.profilePicture);
+});
+
+const settingsAvatar = document.getElementById("settingsAvatar");
+
+const profilePictureActions = document.querySelector(".profile-picture-actions");
+
+settingsAvatar.addEventListener("click", (event) => {
+  event.stopPropagation();
+  profilePictureActions.classList.toggle("show");
+});
+
+const mobileProfileAvatar = document.getElementById("mobileProfileAvatar");
+
+mobileProfileAvatar.addEventListener("click", (event) => {
+  event.stopPropagation();
+  showProfilePicture(state.user?.profilePicture);
+});
+
+profilePictureInput.addEventListener("change", async (event) => {
+  const file = event.target.files[0];
+
+  if (!file) return;
+
+  if (!file.type.startsWith("image/")) {
+    alert("Please select an image.");
+    return;
+  }
+
+  if (file.size > 8 * 1024 * 1024) {
+    alert("Please choose an image smaller than 8MB.");
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = async () => {
+    const image = new Image();
+
+    image.onload = async () => {
+      const canvas = document.createElement("canvas");
+      const size = 400;
+
+      canvas.width = size;
+      canvas.height = size;
+
+      const ctx = canvas.getContext("2d");
+      const scale = Math.max(size / image.width, size / image.height);
+      const width = image.width * scale;
+      const height = image.height * scale;
+
+      ctx.drawImage(
+        image,
+        (size - width) / 2,
+        (size - height) / 2,
+        width,
+        height
+      );
+
+      const profilePicture = canvas.toDataURL("image/jpeg", 0.8);
+
+      try {
+        const result = await api("/api/profile-picture", {
+          method: "PUT",
+          body: JSON.stringify({ profilePicture })
+        });
+
+        state.user.profilePicture = result.profilePicture;
+
+        const mainAvatar = $("#myAvatar");
+
+if (mainAvatar) {
+  const mainText = mainAvatar.querySelector("span");
+
+  mainAvatar.style.backgroundImage =
+    `url('${result.profilePicture}')`;
+  mainAvatar.style.backgroundSize = "cover";
+  mainAvatar.style.backgroundPosition = "center";
+
+  if (mainText) mainText.style.display = "none";
+}
+
+        const mobileAvatar = $("#mobileProfileAvatar");
+
+if (mobileAvatar) {
+  mobileAvatar.style.backgroundImage =
+    `url('${result.profilePicture}')`;
+  mobileAvatar.style.backgroundSize = "cover";
+  mobileAvatar.style.backgroundPosition = "center";
+
+  const mobileText = mobileAvatar.querySelector("span");
+  if (mobileText) mobileText.style.display = "none";
+}
+
+const settingsAvatar = $("#settingsAvatar");
+
+if (settingsAvatar) {
+  settingsAvatar.style.backgroundImage =
+    `url('${result.profilePicture}')`;
+  settingsAvatar.style.backgroundSize = "cover";
+  settingsAvatar.style.backgroundPosition = "center";
+  settingsAvatar.textContent = "";
+}
+
+        toast("Profile picture saved successfully!");
+      } catch (error) {
+        alert(error.message);
+      }
+    };
+
+    image.src = reader.result;
+  };
+
+  reader.readAsDataURL(file);
+});
+
+
+const photoPreview = document.getElementById("photoPreview");
+const photoPreviewImage = document.getElementById("photoPreviewImage");
+const closePhotoPreview = document.getElementById("closePhotoPreview");
+
+console.log("PHOTO PREVIEW ELEMENTS:", {
+  photoPreview,
+  photoPreviewImage,
+  closePhotoPreview
+});
+
+function showProfilePicture(picture) {
+  if (!picture || !photoPreview || !photoPreviewImage) return;
+
+  photoPreviewImage.src = picture;
+  photoPreview.classList.remove("hidden");
+}
+
+function hideProfilePicture() {
+  if (!photoPreview || !photoPreviewImage) return;
+
+  photoPreview.classList.add("hidden");
+  photoPreviewImage.src = "";
+}
+
+if (closePhotoPreview) {
+  closePhotoPreview.addEventListener("click", hideProfilePicture);
+}
+
+if (photoPreview) {
+  photoPreview.addEventListener("click", (event) => {
+    if (event.target === photoPreview) {
+      hideProfilePicture();
+    }
+  });
+}
+
+document.addEventListener("click", (event) => {
+  const avatar = event.target.closest(".avatar, .online-avatar, #settingsAvatar, #mobileProfileAvatar");
+
+  if (!avatar) return;
+
+  const backgroundImage = avatar.style.backgroundImage;
+  const match = backgroundImage.match(/url\(["']?(.*?)["']?\)/);
+
+  if (match && match[1]) {
+    showProfilePicture(match[1]);
+  }
+});

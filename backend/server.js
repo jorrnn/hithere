@@ -37,7 +37,7 @@ webpush.setVapidDetails(
 );
 
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "5mb" }));
 app.use(express.static(path.join(__dirname, "../frontend")));
 
 const sessionMiddleware = session({
@@ -112,8 +112,11 @@ async function canShowOnlineStatus(userId) {
 }
 
 const cleanUser = (u) => ({
-  id: u.id, username: u.username, displayName: u.display_name,
-  avatarColor: u.avatar_color
+  id: u.id,
+  username: u.username,
+  displayName: u.display_name,
+  avatarColor: u.avatar_color,
+  profilePicture: u.profile_picture || null
 });
 
 function requireAuth(req, res, next) {
@@ -219,7 +222,7 @@ app.put("/api/profile", requireAuth, async (req, res) => {
       `UPDATE users
        SET username = $1, display_name = $2, avatar_color = $3
        WHERE id = $4
-       RETURNING id, username, display_name, avatar_color`,
+       RETURNING id, username, display_name, avatar_color, profile_picture`,
       [username, displayName, avatarColor, req.session.userId]
     );
 
@@ -247,6 +250,70 @@ app.put("/api/profile", requireAuth, async (req, res) => {
 });
 
 // GET USER SETTINGS
+// SAVE PROFILE PICTURE
+app.put("/api/profile-picture", requireAuth, async (req, res) => {
+  try {
+    const { profilePicture } = req.body;
+
+    if (typeof profilePicture !== "string") {
+      return res.status(400).json({ error: "No picture was received." });
+    }
+
+    if (!/^data:image\/(jpeg|png|webp);base64,/.test(profilePicture)) {
+      return res.status(400).json({
+        error: "Please upload a JPG, PNG or WebP image."
+      });
+    }
+
+    if (profilePicture.length > 4500000) {
+      return res.status(400).json({
+        error: "Picture is too large. Please choose a smaller image."
+      });
+    }
+
+    const result = await pool.query(
+      `UPDATE users
+       SET profile_picture = $1
+       WHERE id = $2
+       RETURNING profile_picture`,
+      [profilePicture, req.session.userId]
+    );
+
+    res.json({
+      message: "Profile picture saved successfully.",
+      profilePicture: result.rows[0].profile_picture
+    });
+
+  } catch (err) {
+    console.error("Profile picture error:", err);
+    res.status(500).json({
+      error: "Could not save your profile picture."
+    });
+  }
+});
+
+// REMOVE PROFILE PICTURE
+app.delete("/api/profile-picture", requireAuth, async (req, res) => {
+  try {
+    await pool.query(
+      `UPDATE users
+       SET profile_picture = NULL
+       WHERE id = $1`,
+      [req.session.userId]
+    );
+
+    res.json({
+      message: "Profile picture removed successfully."
+    });
+
+  } catch (err) {
+    console.error("Remove profile picture error:", err);
+    res.status(500).json({
+      error: "Could not remove profile picture."
+    });
+  }
+});
+
 app.get("/api/settings", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
@@ -467,7 +534,7 @@ app.get("/api/users/search", requireAuth, async (req, res) => {
   const q = String(req.query.q || "").trim().toLowerCase();
   if (q.length < 2) return res.json({ users: [] });
   const result = await pool.query(
-    `SELECT id, username, display_name, avatar_color FROM users
+    `SELECT id, username, display_name, avatar_color, profile_picture FROM users
      WHERE id <> $1 AND (username ILIKE $2 OR display_name ILIKE $2)
      ORDER BY display_name LIMIT 12`,
     [req.session.userId, `%${q}%`]
@@ -476,21 +543,25 @@ app.get("/api/users/search", requireAuth, async (req, res) => {
 });
 
 
+
 app.get("/api/conversations", requireAuth, async (req, res) => {
   const result = await pool.query(`
     SELECT c.id, c.is_group, c.title,
 
-      (SELECT json_build_object(
-        'id', u.id,
-        'username', u.username,
-        'displayName', u.display_name,
-        'avatarColor', u.avatar_color
-      )
-       FROM conversation_members cm2
-       JOIN users u ON u.id = cm2.user_id
-       WHERE cm2.conversation_id = c.id
-         AND cm2.user_id <> $1
-       LIMIT 1) AS other_user,
+      (
+        SELECT json_build_object(
+          'id', u.id,
+          'username', u.username,
+          'displayName', u.display_name,
+          'avatarColor', u.avatar_color,
+          'profilePicture', u.profile_picture
+        )
+        FROM conversation_members cm2
+        JOIN users u ON u.id = cm2.user_id
+        WHERE cm2.conversation_id = c.id
+          AND cm2.user_id <> $1
+        LIMIT 1
+      ) AS other_user,
 
       (SELECT m.body
        FROM messages m

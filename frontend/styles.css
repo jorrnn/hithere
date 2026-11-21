@@ -920,7 +920,7 @@ button,
 .settings-profile-card {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 8px;
   padding: 18px;
   margin-bottom: 22px;
   border: 1px solid var(--line);
@@ -2132,7 +2132,7 @@ body:not(.dark-mode) .details-note {
   z-index: 9999;
   min-width: 190px;
   padding: 6px;
-  background: #fff;
+  background: #fffaf4 !important;
   border: 1px solid #e9e9e9;
   border-radius: 12px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.16);
@@ -2156,7 +2156,8 @@ body:not(.dark-mode) .details-note {
 }
 
 #deleteEveryoneContextBtn {
-  color: #e04444;
+  color: inherit !important;
+  background: transparent !important;
 }
 
 .message-bubble {
@@ -3724,4 +3725,284 @@ body:not(.dark-mode) .primary-btn:hover {
     margin-top: 3px !important;
     margin-bottom: 3px !important;
   }
+}
+
+/* HiThere — True Black Mobile Dark Mode */
+@media (max-width: 680px) {
+  body.dark-mode .app-shell,
+  body.dark-mode .sidebar,
+  body.dark-mode .mobile-home-header,
+  body.dark-mode .mobile-chat-tabs,
+  body.dark-mode .conversation-list,
+  body.dark-mode .bottom-nav-container,
+  body.dark-mode .bottom-nav {
+    background: #000000 !important;
+    color: #ffffff !important;
+  }
+
+  body.dark-mode .conversation-item {
+    background: #151515 !important;
+    color: #ffffff !important;
+    border-color: #303030 !important;
+  }
+
+  body.dark-mode .mobile-chat-tab {
+    background: #151515;
+    color: #cccccc;
+    border-color: #303030;
+  }
+
+  body.dark-mode .mobile-chat-tab.active {
+    background: #333333;
+    color: #ffffff;
+  }
+
+  body.dark-mode .bottom-nav-item {
+    color: #aaaaaa;
+  }
+
+  body.dark-mode .bottom-nav-item.active {
+    color: #ffffff;
+  }
+}
+
+/* Remove gold text from black dark mode */
+@media (max-width: 680px) {
+  body.dark-mode .mobile-home-header,
+  body.dark-mode .mobile-home-brand,
+  body.dark-mode .mobile-chat-tabs,
+  body.dark-mode .conversation-list,
+  body.dark-mode .conversation-item,
+  body.dark-mode .conversation-item *,
+  body.dark-mode .bottom-nav,
+  body.dark-mode .bottom-nav-item {
+    color: #ffffff !important;
+  }
+
+  body.dark-mode .mobile-chat-tab {
+    color: #ffffff !important;
+  }
+
+  body.dark-mode .mobile-chat-tab.active {
+    color: #ffffff !important;
+  }
+
+  body.dark-mode .conversation-item small,
+  body.dark-mode .conversation-item .muted {
+    color: #aaaaaa !important;
+  }
+}
+/* Dark mode: selected bottom navigation text */
+body.dark-mode .bottom-nav-item.active,
+body.dark-mode .bottom-nav-item.active * {
+  color: #000000 !important;
+}
+
+@media (max-width: 768px) {
+  .mobile-home-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .mobile-home-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 9px;
+  }
+
+  #mobileProfileAvatar {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  #mobileHeaderName {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+  }
+
+  #mobileNotificationBtn {
+    border: none;
+    background: transparent;
+    font-size: 19px;
+    cursor: pointer;
+    padding: 5px;
+  }
+}
+
+.settings-avatar {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.settings-avatar:hover {
+  transform: scale(1.05);
+}
+
+
+.photo-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(20, 18, 16, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.photo-preview.hidden {
+  display: none;
+}
+
+.photo-preview img {
+  width: min(420px, 85vw);
+  height: min(420px, 85vw);
+  object-fit: cover;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4);
+}
+
+.photo-preview-close {
+  position: absolute;
+  top: 25px;
+  right: 30px;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  color: #333;
+  font-size: 30px;
+  cursor: pointer;
+}
+
+
+.settings-avatar-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-picture-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.profile-picture-actions {
+  opacity: 0;
+  visibility: hidden;
+  max-height: 0;
+  overflow: hidden;
+  transform: translateY(-12px) scale(0.95);
+  transform-origin: top center;
+  transition: opacity 0.3s ease,
+              transform 0.3s ease,
+              max-height 0.3s ease,
+              visibility 0.3s ease;
+}
+
+.profile-picture-actions.show {
+  opacity: 1;
+  visibility: visible;
+  max-height: 150px;
+  transform: translateY(0) scale(1);
+}
+
+.profile-picture-actions button {
+  padding: 9px 13px;
+  border: 1px solid #e6ddd3;
+  border-radius: 9px;
+  background: #fffaf4;
+  color: #51443a;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.profile-picture-actions button:hover {
+  background: #eee5da;
+}
+
+.profile-picture-actions #removeProfilePhoto {
+  color: #b34d45;
+  border-color: #ecd3ce;
+}
+
+.profile-picture-actions #removeProfilePhoto:hover {
+  background: #f8e8e5;
+}
+
+.settings-profile-card {
+  align-items: flex-start;
+}
+
+.settings-avatar-area {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.profile-picture-actions {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translate(-50%, -12px) scale(0.95);
+  z-index: 100;
+  width: max-content;
+  background: #fffaf4;
+  padding: 8px;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+.profile-picture-actions.show {
+  transform: translate(-50%, 0) scale(1);
+}
+
+.profile-picture-actions {
+  display: flex;
+  flex-direction: column;
+  min-width: 170px;
+}
+
+.profile-picture-actions.show {
+  display: flex;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: none;
+}
+
+.profile-picture-actions {
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.profile-picture-actions.show {
+  pointer-events: auto;
+}
+
+.profile-picture-actions button {
+  position: relative;
+  z-index: 1001;
+  pointer-events: auto;
+  cursor: pointer;
 }

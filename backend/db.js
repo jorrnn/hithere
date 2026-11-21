@@ -81,6 +81,11 @@ async function initDb() {
   `);
 
   await pool.query(`
+  ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS profile_picture TEXT;
+`);
+
+  await pool.query(`
   ALTER TABLE messages
   ADD COLUMN IF NOT EXISTS deleted_for_everyone BOOLEAN NOT NULL DEFAULT FALSE;
 `);
