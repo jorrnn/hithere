@@ -53,8 +53,13 @@
   </div>
 </div>
 </div>
-      <div class="side-brand"><div class="brand-mark small">H<span>.</span></div><span>HiThere<span class="brand-period">.</span></span></div>
-      <div class="side-user">
+  <div class="side-brand">
+    <div class="brand-mark small">
+      H<span>.</span>
+    </div>
+    <span>HiThere<span class="brand-period">.</span></span>
+  </div>
+  <div class="side-user">
   <div class="avatar profile-avatar" id="myAvatar" title="Change profile picture">
   <span>H</span>
   <input type="file" id="profilePictureInput" accept="image/*" hidden>
@@ -63,11 +68,35 @@
     <strong id="myName">Your profile</strong>
     <small id="myHandle">@username</small>
   </div>
-  <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
-  <button class="icon-btn" id="logoutBtn" title="Sign out">↗</button>
+  <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">
+  <svg viewBox="0 0 24 24" width="20" height="20"
+       fill="none" stroke="currentColor" stroke-width="1.8"
+       stroke-linecap="round" stroke-linejoin="round"
+       aria-hidden="true">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 1.7-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20h-2.4v-.2a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-1.7-1.7.06-.06A1.7 1.7 0 0 0 8.46 15a1.7 1.7 0 0 0-1.56-1.03H6v-2.4h.9a1.7 1.7 0 0 0 1.56-1.03 1.7 1.7 0 0 0-.34-1.88l-.06-.06 1.7-1.7.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 12.73 5.7V5h2.4v.7a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 1.7 1.7-.06.06A1.7 1.7 0 0 0 19.4 10.5a1.7 1.7 0 0 0 1.56 1.03h.2v2.4h-.2A1.7 1.7 0 0 0 19.4 15z"/>
+  </svg>
+</button>
+  <button class="icon-btn" id="logoutBtn" title="Sign out" aria-label="Sign out">
+  <svg viewBox="0 0 24 24" width="20" height="20"
+       fill="none" stroke="currentColor" stroke-width="1.8"
+       stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 17l5-5-5-5"/>
+    <path d="M15 12H3"/>
+    <path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/>
+  </svg>
+</button>
 </div>
   <button id="enableNotificationsBtn" class="notification-btn" type="button">
-  <span class="notification-icon">🔔</span>
+  <span class="notification-icon">
+  <svg viewBox="0 0 24 24" width="19" height="19"
+       fill="none" stroke="currentColor" stroke-width="1.8"
+       stroke-linecap="round" stroke-linejoin="round"
+       aria-hidden="true">
+    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/>
+    <path d="M10 21h4"/>
+  </svg>
+</span>
   <span class="notification-text">Enable Notifications</span>
 </button>
       <div class="side-section-label">

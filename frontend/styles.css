@@ -2877,7 +2877,7 @@ body:not(.dark-mode) .primary-btn:hover {
 #messages,
 .messages {
   background-color: #f6f1e9 !important;
-  background-image: radial-gradient(#e5dace 0.7px, transparent 0.7px) !important;
+  background-image: radial-gradient(rgba(72, 69, 65, 0.35) 0.7px, transparent 0.7px) !important;
   background-size: 18px 18px !important;
 }
 
@@ -4005,4 +4005,455 @@ body.dark-mode .bottom-nav-item.active * {
   z-index: 1001;
   pointer-events: auto;
   cursor: pointer;
+}
+
+/* HITHERE — CONSISTENT THEME COLOURS */
+
+:root {
+  --chat-header-bg: var(--paper);
+  --chat-area-bg: var(--canvas);
+  --messages-bg: var(--canvas);
+  --message-in-bg: #fffdf9;
+  --message-out-bg: #dcebd9;
+  --message-in-text: var(--ink);
+  --message-out-text: #304333;
+  --chat-name-color: var(--ink);
+  --chat-hover-bg: var(--soft);
+  --chat-active-bg: var(--line);
+  --composer-bg: var(--paper);
+  --composer-border: var(--line);
+}
+
+body.dark-mode {
+  --chat-header-bg: var(--paper);
+  --chat-area-bg: var(--canvas);
+  --messages-bg: var(--canvas);
+  --message-in-bg: #252130;
+  --message-out-bg: #302a40;
+  --message-in-text: var(--ink);
+  --message-out-text: var(--ink);
+  --chat-name-color: var(--ink);
+  --chat-hover-bg: var(--soft);
+  --chat-active-bg: var(--soft);
+  --composer-bg: var(--paper);
+  --composer-border: var(--line);
+}
+
+/* HITHERE — APPLY THEME VARIABLES TO CHAT ELEMENTS */
+
+.chat-area {
+  background: var(--chat-area-bg) !important;
+}
+
+.chat-header {
+  background: var(--chat-header-bg) !important;
+  color: var(--ink) !important;
+  border-bottom: 1px solid var(--line) !important;
+}
+
+.chat-header h3,
+.chat-header .contact-name,
+.chat-header .active-chat-head strong {
+  color: var(--chat-name-color) !important;
+}
+
+#messages,
+.messages {
+  background-color: var(--messages-bg) !important;
+  color: var(--ink) !important;
+}
+
+.message-bubble {
+  background: var(--message-in-bg) !important;
+  color: var(--message-in-text) !important;
+}
+
+.message.mine .message-bubble {
+  background: var(--message-out-bg) !important;
+  color: var(--message-out-text) !important;
+}
+
+.conversation-item {
+  background: transparent !important;
+  color: var(--chat-name-color) !important;
+}
+
+.conversation-item:hover {
+  background: var(--chat-hover-bg) !important;
+}
+
+.conversation-item.active {
+  background: var(--chat-active-bg) !important;
+}
+
+.conversation-item .name,
+.conversation-meta strong {
+  color: var(--chat-name-color) !important;
+}
+
+.conversation-meta small {
+  color: var(--muted) !important;
+}
+
+.composer {
+  background: var(--composer-bg) !important;
+  border-color: var(--composer-border) !important;
+}
+
+#messageInput {
+  background: var(--composer-bg) !important;
+  color: var(--ink) !important;
+  border-color: var(--composer-border) !important;
+}
+
+/* FIX: MATCH MOBILE DARK MODE WITH DESKTOP */
+
+@media (max-width: 680px) {
+
+  body.dark-mode,
+  body.dark-mode .app-shell,
+  body.dark-mode .sidebar,
+  body.dark-mode .chat-area {
+    background: var(--canvas) !important;
+    color: var(--ink) !important;
+  }
+
+  body.dark-mode .chat-header,
+  body.dark-mode .composer {
+    background: var(--paper) !important;
+    color: var(--ink) !important;
+    border-color: var(--line) !important;
+  }
+
+  body.dark-mode .messages {
+    background-color: var(--canvas) !important;
+    color: var(--ink) !important;
+  }
+
+  body.dark-mode .conversation-item {
+    background: transparent !important;
+    color: var(--ink) !important;
+  }
+
+  body.dark-mode .conversation-item:hover,
+  body.dark-mode .conversation-item.active {
+    background: var(--soft) !important;
+  }
+
+  body.dark-mode .conversation-meta strong,
+  body.dark-mode .active-chat-head strong,
+  body.dark-mode .chat-header .contact-name {
+    color: var(--ink) !important;
+  }
+
+  body.dark-mode .conversation-meta small,
+  body.dark-mode .active-chat-head small {
+    color: var(--muted) !important;
+  }
+
+  body.dark-mode #messageInput {
+    background: var(--paper) !important;
+    color: var(--ink) !important;
+  }
+}
+
+/* RESTORE MOBILE BOTTOM NAVIGATION */
+
+@media (max-width: 680px) {
+  .app-shell:not(.chat-open) .bottom-nav-container {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* .app-shell:not(.chat-open) .bottom-nav {
+    display: grid !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  } */
+}
+
+/* HITHERE — FINAL MOBILE DARK MODE FIX */
+
+@media (max-width: 768px) {
+
+  body.dark-mode,
+  body.dark-mode .app-shell,
+  body.dark-mode .sidebar {
+    background: var(--canvas) !important;
+    color: var(--ink) !important;
+  }
+
+  /* Conversation cards */
+  body.dark-mode .conversation-item,
+  body.dark-mode .conversation-item:active {
+    background: var(--paper) !important;
+    border: 1px solid var(--line) !important;
+    color: var(--ink) !important;
+    box-shadow: none !important;
+  }
+
+  body.dark-mode .conversation-item:hover,
+  body.dark-mode .conversation-item.active {
+    background: var(--soft) !important;
+  }
+
+  body.dark-mode .conversation-item strong,
+  body.dark-mode .conversation-item .name,
+  body.dark-mode .conversation-meta strong {
+    color: var(--ink) !important;
+  }
+
+  body.dark-mode .conversation-item small,
+  body.dark-mode .conversation-item p,
+  body.dark-mode .conversation-meta small {
+    color: var(--muted) !important;
+  }
+
+  /* Chat header */
+  body.dark-mode .chat-header {
+    background: var(--paper) !important;
+    border-color: var(--line) !important;
+  }
+
+  body.dark-mode .chat-header h3,
+  body.dark-mode .chat-header .contact-name,
+  body.dark-mode .active-chat-head strong,
+  body.dark-mode .mobile-brand .brand-word {
+    color: var(--ink) !important;
+  }
+
+  /* Messages */
+  body.dark-mode .messages {
+    background: var(--canvas) !important;
+    color: var(--ink) !important;
+  }
+
+  body.dark-mode .message-bubble {
+    background: var(--paper) !important;
+    color: var(--ink) !important;
+    border-color: var(--line) !important;
+  }
+
+  body.dark-mode .message.mine .message-bubble {
+    background: var(--soft) !important;
+    color: var(--ink) !important;
+  }
+
+  /* Composer */
+  body.dark-mode .composer {
+    background: var(--paper) !important;
+    border-color: var(--line) !important;
+  }
+
+  body.dark-mode #messageInput {
+    background: transparent !important;
+    color: var(--ink) !important;
+  }
+
+  body.dark-mode .composer-plus {
+    background: var(--soft) !important;
+    color: var(--purple) !important;
+  }
+
+  body.dark-mode .send-btn {
+    background: var(--purple) !important;
+    color: white !important;
+  }
+
+  /* Bottom navigation */
+  body.dark-mode .bottom-nav {
+    background: var(--paper) !important;
+    border: 1px solid var(--line) !important;
+  }
+
+  body.dark-mode .bottom-nav-item {
+    color: var(--muted) !important;
+  }
+
+  body.dark-mode .bottom-nav-item.active {
+    color: var(--purple) !important;
+  }
+}
+
+/* HITHERE — COMPLETE MOBILE DARK MODE COLOURS */
+
+@media (max-width: 768px) {
+
+  /* Top HiThere header */
+  body.dark-mode .mobile-home-header {
+    background: var(--paper) !important;
+    border-color: var(--line) !important;
+  }
+
+  body.dark-mode .mobile-home-brand,
+  body.dark-mode .mobile-home-brand .brand-word {
+    background: transparent !important;
+    color: var(--ink) !important;
+  }
+
+  body.dark-mode .mobile-home-actions button,
+  body.dark-mode .mobile-home-actions .icon-btn,
+  body.dark-mode .mobile-home-actions .notification-btn {
+    background: var(--soft) !important;
+    color: var(--ink) !important;
+    border-color: var(--line) !important;
+  }
+
+  /* CHATS, GROUPS AND CALLS */
+  body.dark-mode .mobile-chat-tabs {
+    background: var(--canvas) !important;
+  }
+
+  body.dark-mode .mobile-chat-tab {
+    background: var(--paper) !important;
+    color: var(--ink) !important;
+    border-color: var(--line) !important;
+  }
+
+  body.dark-mode .mobile-chat-tab.active {
+    background: var(--soft) !important;
+    color: var(--purple) !important;
+    border-color: var(--purple) !important;
+  }
+
+  /* CONTACTS SECTION */
+  body.dark-mode .sidebar,
+  body.dark-mode .conversation-list,
+  body.dark-mode .online-people-section {
+    background: var(--canvas) !important;
+    color: var(--ink) !important;
+  }
+
+  body.dark-mode .side-section-label {
+    color: var(--muted) !important;
+  }
+
+  body.dark-mode .search-wrap {
+    background: var(--paper) !important;
+    border-color: var(--line) !important;
+    color: var(--muted) !important;
+  }
+
+  body.dark-mode .search-wrap input {
+    background: transparent !important;
+    color: var(--ink) !important;
+  }
+
+  body.dark-mode .conversation-item {
+    background: var(--paper) !important;
+    border-color: var(--line) !important;
+    color: var(--ink) !important;
+  }
+
+  body.dark-mode .conversation-item strong {
+    color: var(--ink) !important;
+  }
+
+  body.dark-mode .conversation-item small,
+  body.dark-mode .conversation-item p {
+    color: var(--muted) !important;
+  }
+}
+
+/* MOBILE NAVIGATION SPACING AND USERNAME FIX */
+
+@media (max-width: 768px) {
+
+  /* Username at the top */
+  body.dark-mode #myName,
+  body.dark-mode #mobileHeaderName,
+  body.dark-mode .mobile-home-actions #myName {
+    color: #ffffff !important;
+  }
+}
+
+/* HITHERE — FINAL CHAT THEME OVERRIDE */
+
+/* Chat layout */
+.chat-area {
+  background: var(--chat-area-bg) !important;
+  color: var(--ink) !important;
+}
+
+/* Conversation header */
+.chat-header {
+  background: var(--chat-header-bg) !important;
+  color: var(--ink) !important;
+  border-color: var(--line) !important;
+}
+
+.chat-header h3,
+.chat-header .contact-name,
+.chat-header .active-chat-head strong,
+.active-chat-head strong {
+  color: var(--chat-name-color) !important;
+}
+
+/* Message area */
+#messages,
+.messages {
+  background-color: var(--messages-bg) !important;
+  color: var(--ink) !important;
+}
+
+/* Message bubbles */
+.message-bubble {
+  background: var(--message-in-bg) !important;
+  color: var(--message-in-text) !important;
+}
+
+.message.mine .message-bubble {
+  background: var(--message-out-bg) !important;
+  color: var(--message-out-text) !important;
+}
+
+/* Desktop and mobile conversation names */
+.conversation-item,
+.conversation-item .name,
+.conversation-item strong,
+.conversation-meta strong {
+  color: var(--chat-name-color) !important;
+}
+
+.conversation-item:hover {
+  background: var(--chat-hover-bg) !important;
+}
+
+.conversation-item.active {
+  background: var(--chat-active-bg) !important;
+}
+
+.conversation-item small,
+.conversation-item p,
+.conversation-meta small {
+  color: var(--muted) !important;
+}
+
+/* Message composer */
+.composer {
+  background: var(--composer-bg) !important;
+  border-color: var(--composer-border) !important;
+}
+
+#messageInput {
+  background: transparent !important;
+  color: var(--ink) !important;
+}
+
+/* Keep dark mode consistent on every screen size */
+body.dark-mode .chat-area,
+body.dark-mode .chat-header,
+body.dark-mode #messages,
+body.dark-mode .messages,
+body.dark-mode .conversation-item,
+body.dark-mode .composer {
+  color: var(--ink) !important;
+}
+
+/* Prevent mobile bottom navigation from covering Settings content */
+@media (max-width: 768px) {
+  .settings-page {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
+  }
 }

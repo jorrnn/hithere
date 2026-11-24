@@ -287,7 +287,7 @@ if (mobileAvatar) {
   const mobileAvatarText = mobileAvatar.querySelector("span");
 
   if (mobileAvatarText) {
-    mobileAvatarText.textContent = initials(user.displayName);
+    mobileAvatarText.textContent = (user.displayName || "?").trim().charAt(0).toUpperCase();
     mobileAvatarText.style.display = user.profilePicture ? "none" : "block";
   }
 
@@ -669,6 +669,12 @@ state.socket.on("message:deleted", data => {
   } catch (error) {
     console.error("Could not load user settings:", error);
   }
+
+  if (!window.location.hash) {
+  setAppRoute("/chat", true);
+} else {
+  await handleAppRoute();
+}
 }
 
 async function loadConversations() {
@@ -906,8 +912,11 @@ function renderActiveHeader() {
   `;
 }
 
-async function openConversation(id) {
+async function openConversation(id, options = {}) {
   const c=state.conversations.find(x=>Number(x.id)===id); if(!c)return;
+  if (!options.fromRoute) {
+  setAppRoute(`/chat/${id}`);
+}
   state.activeId=id; 
   console.log("OPENED CONVERSATION ID:", id);
   $(".app-shell")?.classList.add("chat-open");
@@ -1351,22 +1360,10 @@ $("#navNewChat")?.addEventListener("click", () => {
 });
 
 // CALL HISTORY NAVIGATION
-$("#navCalls")?.addEventListener("click", openCalls);
+$("#navCalls")?.addEventListener("click", () => setAppRoute("/calls"));
 
 $("#backToChats")?.addEventListener("click", () => {
-  // Return to the conversations screen.
-  $("#appView")?.classList.remove("chat-open");
-
-  // Clear the active conversation.
-  state.activeId = null;
-  state.activeUser = null;
-
-  // Show the welcome screen.
-  $("#messagePanel")?.classList.add("hidden");
-  $("#welcomePanel")?.classList.remove("hidden");
-
-  // Refresh the conversation list.
-  renderConversations();
+  setAppRoute("/chat");
 });
 
 
@@ -1377,6 +1374,84 @@ $("#backToChats")?.addEventListener("click", () => {
 const settingsView = $("#settingsView");
 const callsView = $("#callsView");
 console.log("Calls element found:", callsView);
+
+
+// ========================================
+// HITHERE HASH ROUTER
+// ========================================
+
+function setAppRoute(path, replace = false) {
+  const newHash = `#${path}`;
+
+  if (window.location.hash === newHash) return;
+
+  if (replace) {
+    history.replaceState(
+      null,
+      "",
+      window.location.pathname + window.location.search + newHash
+    );
+    handleAppRoute();
+  } else {
+    window.location.hash = path;
+  }
+}
+
+async function handleAppRoute() {
+  if (!state.user) return;
+
+  const route = window.location.hash.replace(/^#\/?/, "");
+
+  if (route === "settings") {
+    callsView?.classList.add("hidden");
+    $("#messagePanel")?.classList.add("hidden");
+    $("#welcomePanel")?.classList.add("hidden");
+    openSettings();
+    return;
+  }
+
+  if (route === "calls") {
+    settingsView?.classList.add("hidden");
+    $("#messagePanel")?.classList.add("hidden");
+    $("#welcomePanel")?.classList.add("hidden");
+    openCalls();
+    return;
+  }
+
+  const chatMatch = route.match(/^chat\/(\d+)$/);
+
+  if (chatMatch) {
+    settingsView?.classList.add("hidden");
+    callsView?.classList.add("hidden");
+
+    await openConversation(Number(chatMatch[1]), {
+      fromRoute: true
+    });
+    return;
+  }
+
+  // Default route: conversation list
+  settingsView?.classList.add("hidden");
+  callsView?.classList.add("hidden");
+  $("#appView")?.classList.remove("chat-open");
+  $(".app-shell")?.classList.remove("chat-open");
+
+  state.activeId = null;
+  state.activeUser = null;
+
+  $("#messagePanel")?.classList.add("hidden");
+  $("#welcomePanel")?.classList.remove("hidden");
+
+  document.querySelectorAll(".bottom-nav-item")
+    .forEach(item => item.classList.remove("active"));
+
+  $("#navChats")?.classList.add("active");
+
+  renderConversations();
+}
+
+window.addEventListener("hashchange", handleAppRoute);
+
 
 function openSettings() {
   if (!settingsView) return;
@@ -1533,7 +1608,7 @@ function closeSettings() {
 }
 
 // Desktop settings button
-$("#settingsBtn")?.addEventListener("click", openSettings);
+$("#settingsBtn")?.addEventListener("click", () => setAppRoute("/settings"));
 document.getElementById("mobileSearchBtn")?.addEventListener("click", () => {
   document.getElementById("chatSearch")?.focus();
 });
@@ -1552,25 +1627,24 @@ const updateMobileAvatar = () => {
   const originalAvatar = document.getElementById("myAvatar");
   const mobileAvatar = document.getElementById("mobileProfileAvatar");
 
-  if (originalAvatar && mobileAvatar) {
-    mobileAvatar.textContent = originalAvatar.textContent.trim().charAt(0) || "H";
+  if (originalAvatar && mobileAvatar && !state.user?.profilePicture) {
+    const mobileAvatarText = mobileAvatar.querySelector("span");
+
+    if (mobileAvatarText) {
+      mobileAvatarText.textContent = (state.user?.displayName || "?").trim().charAt(0).toUpperCase();
+    }
   }
 };
 
 updateMobileAvatar();
-
 // Mobile settings button
-$("#navSettings")?.addEventListener("click", openSettings);
+$("#navSettings")?.addEventListener("click", () => setAppRoute("/settings"));
 
 // Close settings
-$("#closeSettings")?.addEventListener("click", closeSettings);
+$("#closeSettings")?.addEventListener("click", () => setAppRoute("/chat"));
+
 $("#closeCalls")?.addEventListener("click", () => {
-  callsView?.classList.add("hidden");
-
-  document.querySelectorAll(".bottom-nav-item")
-    .forEach(item => item.classList.remove("active"));
-
-  $("#navChats")?.classList.add("active");
+  setAppRoute("/chat");
 });
 
 // ========================================
@@ -1956,7 +2030,7 @@ $("#cameraCallBtn")?.addEventListener("click", () => {
 lucide.createIcons();
 });
 
-// Organise mobile header controls
+// Organise header controls responsively
 const mobileActions = document.querySelector(".mobile-home-actions");
 
 if (mobileActions) {
@@ -1977,17 +2051,26 @@ if (mobileActions) {
       element.dataset.headerPlaceholder = "true";
       element._headerPlaceholder = placeholder;
     }
-
-    mobileActions.appendChild(element);
   });
+
+  function arrangeHeaderControls() {
+    controls.forEach(element => {
+      if (!element || !element._headerPlaceholder) return;
+
+      if (window.innerWidth <= 768) {
+        mobileActions.appendChild(element);
+      } else {
+        element._headerPlaceholder.parentNode.insertBefore(
+          element,
+          element._headerPlaceholder.nextSibling
+        );
+      }
+    });
+  }
+
+  arrangeHeaderControls();
+  window.addEventListener("resize", arrangeHeaderControls);
 }
-
-// Profile picture upload
-const profilePictureInput = document.getElementById("profilePictureInput");
-profilePictureInput?.addEventListener("click", (event) => {
-  event.stopPropagation();
-});
-
 
 
 // View the current profile picture
